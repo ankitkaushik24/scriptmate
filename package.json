@@ -2,9 +2,13 @@
   "name": "scriptmate",
   "displayName": "ScriptMate",
   "description": "Helps execute your scripts with ease. More than just a script alias.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "AnkitKaushik",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ankitkaushik24/scriptmate"
+  },
   "engines": {
     "vscode": "^1.96.2"
   },

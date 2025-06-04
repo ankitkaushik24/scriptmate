@@ -1,9 +1,13 @@
 # Change Log
 
-All notable changes to the "scriptmate" extension will be documented in this file.
+All notable changes to the "ScriptMate" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [Unreleased]
+## [0.0.2] - 2024-06-04
+
+- Updated extension icon
+
+## [0.0.1] - 2024-06-04
 
 - Initial release
