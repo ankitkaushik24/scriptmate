@@ -1,0 +1,121 @@
+{
+  "name": "scriptmate",
+  "displayName": "ScriptMate",
+  "description": "Helps execute your scripts with ease. More than just a script alias.",
+  "version": "0.0.1",
+  "publisher": "AnkitKaushik",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.96.2"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:scriptmate.executeRegisteredScript",
+    "onView:scriptmate.customCommandsView"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "scriptmate.executeRegisteredScript",
+        "title": "ScriptMate: Execute Registered Script..."
+      },
+      {
+        "command": "scriptmate.showCustomCommandsManager",
+        "title": "ScriptMate: Manage Custom Scripts",
+        "category": "ScriptMate"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "when": "resourceLangId == javascript && resourceExtname == .mjs || resourceExtname == .sh",
+          "command": "scriptmate.executeRegisteredScript",
+          "group": "navigation"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "when": "resourceLangId == javascript && resourceExtname == .mjs || resourceExtname == .sh",
+          "command": "scriptmate.executeRegisteredScript",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "ScriptMate Configuration",
+      "properties": {
+        "scriptmate.customCommandsPath": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to a JSON file containing your custom ScriptMate command definitions. Example: /Users/me/scriptmate_commands.json or C:\\\\Users\\\\me\\\\scriptmate_commands.json."
+        },
+        "scriptmate.baseDirectory": {
+          "type": "string",
+          "description": "The absolute path to the directory containing your scripts (e.g., /Users/me/myprojects). This is used as a default argument if a script requires it."
+        },
+        "scriptmate.globalEnv": {
+          "type": "object",
+          "description": "Global environment variables to set for all executed scripts. Values can use supported VS Code variable syntax (e.g., ${workspaceFolder}, ${userHome}, ${config:your.setting}, ${env:SYS_VAR}).",
+          "default": {},
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "scriptmate-activitybar",
+          "title": "ScriptMate",
+          "icon": "$(list-ordered)"
+        }
+      ]
+    },
+    "views": {
+      "scriptmate-activitybar": [
+        {
+          "id": "scriptmate.customCommandsView",
+          "name": "My Scripts",
+          "type": "webview",
+          "contextualTitle": "ScriptMate"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "webpack",
+    "watch": "webpack --watch",
+    "package": "webpack --mode production --devtool hidden-source-map",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.96.2",
+    "@typescript-eslint/eslint-plugin": "^8.31.1",
+    "@typescript-eslint/parser": "^8.31.1",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.4.2",
+    "@vscode/webview-ui-toolkit": "^1.4.0",
+    "css-loader": "^7.1.2",
+    "eslint": "^9.25.1",
+    "ts-loader": "^9.5.2",
+    "typescript": "^5.8.3",
+    "webpack": "^5.99.7",
+    "webpack-cli": "^6.0.1"
+  },
+  "dependencies": {
+    "@vscode/codicons": "^0.0.36"
+  },
+  "icon": "icon.png"
+}
