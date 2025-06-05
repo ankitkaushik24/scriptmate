@@ -20,12 +20,17 @@ export class ModalPanelManager {
       : undefined;
 
     const isNewCommand = !commandToEdit;
+    const globalBaseDirectory = vscode.workspace
+      .getConfiguration("scriptmate")
+      .get<string>("baseDirectory");
+
     const commandDataForModal: ScriptDefinition = commandToEdit
-      ? { ...commandToEdit }
+      ? { baseDirectory: globalBaseDirectory, ...commandToEdit }
       : ({
           id: crypto.randomUUID(),
           label: "",
           command: "",
+          baseDirectory: globalBaseDirectory || "",
           args: [],
         } as ScriptDefinition);
 
@@ -117,6 +122,23 @@ export class ModalPanelManager {
                 payload: { error: String(error), command: scriptDef },
               });
             }
+            return;
+          case "select-folder":
+            const options: vscode.OpenDialogOptions = {
+              canSelectMany: false,
+              openLabel: "Select Base Directory",
+              canSelectFolders: true,
+              canSelectFiles: false,
+            };
+
+            vscode.window.showOpenDialog(options).then((fileUri) => {
+              if (fileUri && fileUri[0]) {
+                this.panel?.webview.postMessage({
+                  type: "folder-selected",
+                  path: fileUri[0].fsPath,
+                });
+              }
+            });
             return;
           case "cancelModal":
             this.panel?.dispose();

@@ -69,6 +69,9 @@ export function getCssSidePanelWebview() {
             color: var(--vscode-descriptionForeground);
             margin-bottom: 2px;
         }
+        .actions {
+            flex-shrink: 0;
+        }
         .actions vscode-button {
             margin-left: 5px;
         }

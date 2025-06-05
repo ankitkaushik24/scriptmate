@@ -11,7 +11,8 @@ async function promptForArguments(
   commandDef: ScriptDefinition,
   currentArgValues: { [key: string]: string | boolean }
 ): Promise<void> {
-  const baseDirectory = config.get<string>("baseDirectory");
+  const globalBaseDirectory = config.get<string>("baseDirectory");
+  const baseDirectory = commandDef.baseDirectory || globalBaseDirectory;
 
   function buildCommandString(args: {
     [key: string]: string | boolean;
@@ -110,7 +111,8 @@ async function promptForArguments(
     const newEnv: { [key: string]: string | undefined } = {
       ...process.env,
       ...userGlobalEnv,
-      SCRIPTMATE_BASE_DIRECTORY: baseDirectory,
+      SCRIPTMATE_BASE_DIRECTORY:
+        commandDef.baseDirectory || config.get<string>("baseDirectory"),
     };
 
     const terminalOptions: vscode.TerminalOptions = {
@@ -139,7 +141,7 @@ async function promptForArguments(
     let newValue: string | boolean | undefined;
     if (argToEdit.type === "string") {
       const input = await vscode.window.showInputBox({
-        prompt: argToEdit.prompt || `Enter new value for --${argToEdit.name}`,
+        prompt: `Enter new value for --${argToEdit.name}`,
         placeHolder: argToEdit.description,
         value:
           (currentArgValues[argToEdit.name] as string) ||

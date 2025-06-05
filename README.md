@@ -12,8 +12,8 @@ Stop juggling terminal windows and context-switching. With ScriptMate, your scri
     - Specify argument `name`, `description` (used in prompts), `type` (string or boolean).
     - Set `defaultValue` for arguments.
     - Mark arguments as `required`.
-    - Provide custom `prompt` messages for interactive input.
     - Flag string arguments as `isPositional`.
+  - Set a script-specific `baseDirectory` to override the global setting.
 - **Quick Script Execution**:
   - Run registered scripts directly from the ScriptMate view.
   - Context menu integration: Execute scripts on `.mjs` or `.sh` files directly from the Explorer or Editor title context menus (via the "ScriptMate: Execute Registered Script..." command).
@@ -77,13 +77,13 @@ To use this with ScriptMate, you would:
         "label": "Serve QA",
         "description": "Runs npm run serve:qa",
         "command": "npm run serve:qa",
+        "baseDirectory": "/path/to/your/project",
         "args": [
           {
             "name": "authToken",
             "description": "The auth token to pass to the serve:qa script",
             "type": "string",
-            "required": true,
-            "prompt": "Enter the auth token:"
+            "required": true
           }
         ]
       }

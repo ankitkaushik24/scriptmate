@@ -9,7 +9,7 @@ export function getHtmlForModalWebview(
   commandData: ScriptDefinition, // Changed from commandToEdit
   isNewCommand: boolean // Added to control readonly and text
 ): string {
-  const vueUri = "https://unpkg.com/vue@3.4.27/dist/vue.global.prod.js";
+  const vueUri = "https://unpkg.com/vue@3/dist/vue.global.js";
   const toolkitUri = webview.asWebviewUri(
     vscode.Uri.joinPath(
       context.extensionUri,
@@ -64,10 +64,6 @@ export function getHtmlForModalWebview(
                 
                 <div v-if="!loading">
                     <div class="form-group">
-                        <vscode-text-field v-model="formData.id" readonly>ID (auto-generated):</vscode-text-field>
-                         <small>ID is auto-generated and cannot be changed.</small>
-                    </div>
-                    <div class="form-group">
                         <vscode-text-field v-model="formData.label">Label (for Quick Pick & UI):</vscode-text-field>
                     </div>
                     <div class="form-group">
@@ -75,6 +71,10 @@ export function getHtmlForModalWebview(
                     </div>
                     <div class="form-group">
                         <vscode-text-field v-model="formData.command">Command String (e.g., zx src/my.mjs, npm run task):</vscode-text-field>
+                    </div>
+                    <div class="form-group">
+                         <vscode-text-field v-model="formData.baseDirectory" readonly placeholder="Inherits global setting if blank">Base Directory:</vscode-text-field>
+                         <vscode-button appearance="secondary" @click="selectBaseDirectory">Browse...</vscode-button>
                     </div>
 
                     <div class="form-section-title">Arguments ({{ formData.args.length }})</div>
@@ -104,9 +104,6 @@ export function getHtmlForModalWebview(
                                 <vscode-radio :value="true">True</vscode-radio>
                                 <vscode-radio :value="false">False</vscode-radio>
                             </vscode-radio-group>
-                        </div>
-                        <div class="form-group">
-                            <vscode-text-field v-model="arg.prompt">Custom Prompt (optional):</vscode-text-field>
                         </div>
                         <div class="form-group checkbox-group">
                             <vscode-checkbox :checked="arg.required" @change="arg.required = $event.target.checked">Required</vscode-checkbox>
@@ -143,6 +140,7 @@ export function getHtmlForModalWebview(
                             label: '',
                             description: '',
                             command: '',
+                            baseDirectory: '',
                             args: []
                         });
 
@@ -151,6 +149,7 @@ export function getHtmlForModalWebview(
                             formData.label = data.label || '';
                             formData.description = data.description || '';
                             formData.command = data.command || '';
+                            formData.baseDirectory = data.baseDirectory || '';
                             formData.args = JSON.parse(JSON.stringify(data.args || [])); // Deep copy for args
                             isEditMode.value = !isNew; // Use isNew to determine edit mode
                             originalId.value = !isNew ? data.id : null; // Only set originalId if actually editing
@@ -158,6 +157,10 @@ export function getHtmlForModalWebview(
                             saveError.value = null;
                         };
                         
+                        const selectBaseDirectory = () => {
+                            vscode.postMessage({ type: 'select-folder' });
+                        };
+
                         const addArgument = () => {
                             formData.args.push({
                                 name: '',
@@ -165,7 +168,6 @@ export function getHtmlForModalWebview(
                                 type: 'string',
                                 defaultValue: '',
                                 required: false,
-                                prompt: '',
                                 isPositional: false
                             });
                         };
@@ -214,6 +216,9 @@ export function getHtmlForModalWebview(
                                     case 'initialData':
                                         resetForm(message.payload.command, message.payload.isNew);
                                         break;
+                                    case 'folder-selected':
+                                        formData.baseDirectory = message.path;
+                                        break;
                                     case 'saveError':
                                         saveError.value = message.payload.error;
                                         // message.payload.error === 'ID_EXISTS' 
@@ -234,6 +239,7 @@ export function getHtmlForModalWebview(
                             removeArgument,
                             save,
                             cancel,
+                            selectBaseDirectory,
                             saveError
                         };
                     }

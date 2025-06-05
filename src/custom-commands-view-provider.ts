@@ -1,9 +1,6 @@
 import * as vscode from "vscode";
-import * as fs from "fs";
-import * as path from "path";
-import { CommandStore } from "./command-store";
-import { getNonce } from "./utils"; // We'll create this utility for CSP
 import { ScriptDefinition } from "./command-definitions";
+import { CommandStore } from "./command-store";
 import { getHtmlSidePanelWebview } from "./webview/side-panel/getHtmlSidePanelWebview";
 
 export class CustomCommandsViewProvider implements vscode.WebviewViewProvider {

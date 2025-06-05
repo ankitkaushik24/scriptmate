@@ -7,7 +7,7 @@ export function getHtmlSidePanelWebview(
   context: vscode.ExtensionContext
 ): string {
   const webview = webviewView.webview;
-  const vueUri = "https://unpkg.com/vue@3.4.27/dist/vue.global.prod.js";
+  const vueUri = "https://unpkg.com/vue@3/dist/vue.global.js";
   const cspSource = webview.cspSource;
   const vueOrigin = new URL(vueUri).origin;
   const toolkitUri = webview.asWebviewUri(
