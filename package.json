@@ -2,7 +2,7 @@
   "name": "scriptmate",
   "displayName": "ScriptMate",
   "description": "Helps execute your scripts with ease. More than just a script alias.",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "publisher": "AnkitKaushik",
   "license": "MIT",
   "repository": {
