@@ -11,7 +11,7 @@ export function getHtmlSettingsWebview(
       "@vscode",
       "webview-ui-toolkit",
       "dist",
-      "toolkit.js"
+      "toolkit.min.js"
     )
   );
   const codiconsUri = webviewPanel.webview.asWebviewUri(
