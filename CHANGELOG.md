@@ -2,6 +2,21 @@
 
 All notable changes to the "scriptmate" extension will be documented in this file.
 
+## [0.2.0] - 2025-06-09
+
+### Added
+
+- **Settings Panel**: New dedicated settings interface accessible via settings icon in the side panel
+- **Visual Settings Management**: Easy-to-use interface for configuring base directory and custom command definition file
+- **File/Directory Browser Integration**: Browse buttons for selecting directories and files directly from the settings panel
+- **Auto-populated Default Paths**: VS Code settings now automatically show the actual default paths being used instead of empty fields
+- **Enhanced Settings Transparency**: Users can now clearly see where their command definitions are stored
+
+### Changed
+
+- **Improved Settings Visibility**: The `customCommandsPath` setting now auto-populates with the default path when empty, making it visible in VS Code's native settings UI
+- **Single-page Settings Layout**: All settings are displayed on one page for better usability (removed tabbed interface)
+
 ## [0.1.0] - 2025-06-05
 
 ### Added
