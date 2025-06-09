@@ -25,11 +25,6 @@
       {
         "command": "scriptmate.executeRegisteredScript",
         "title": "ScriptMate: Execute Registered Script..."
-      },
-      {
-        "command": "scriptmate.showCustomCommandsManager",
-        "title": "ScriptMate: Manage Custom Scripts",
-        "category": "ScriptMate"
       }
     ],
     "menus": {
@@ -54,15 +49,15 @@
         "scriptmate.customCommandsPath": {
           "type": "string",
           "default": "",
-          "description": "Absolute path to a JSON file containing your custom ScriptMate command definitions. Example: /Users/me/scriptmate_commands.json or C:\\\\Users\\\\me\\\\scriptmate_commands.json."
+          "description": "Absolute path to a JSON file containing your custom ScriptMate command definitions. If not specified, defaults to VS Code's global storage. Example: /Users/me/scriptmate_commands.json or C:\\\\Users\\\\me\\\\scriptmate_commands.json."
         },
         "scriptmate.baseDirectory": {
           "type": "string",
-          "description": "The absolute path to the directory containing your scripts (e.g., /Users/me/myprojects). This is used as a default argument if a script requires it."
+          "description": "The absolute path to the directory from which your scripts will be executed. ScriptMate will 'cd' into this directory before running any commands."
         },
         "scriptmate.globalEnv": {
           "type": "object",
-          "description": "Global environment variables to set for all executed scripts. Values can use supported VS Code variable syntax (e.g., ${workspaceFolder}, ${userHome}, ${config:your.setting}, ${env:SYS_VAR}).",
+          "description": "Global environment variables to set for all executed scripts.",
           "default": {},
           "additionalProperties": {
             "type": "string"

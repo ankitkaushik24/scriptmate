@@ -44,7 +44,9 @@ export class CommandStore {
       );
       this._customCommandsJsonPath = this.getDefaultCommandsPath();
     } else {
+      // No custom path set, use default and auto-populate the setting
       this._customCommandsJsonPath = this.getDefaultCommandsPath();
+      this.autoPopulateDefaultPath();
     }
     console.log(
       "ScriptMate: Custom commands path resolved to:",
@@ -169,12 +171,34 @@ export class CommandStore {
     this._commands = this._commands.filter((c) => c.id !== commandId);
     if (this._commands.length === initialLength) {
       vscode.window
-        .showWarningMessage(`ScriptMate: Command with ID '${commandId}' not found for deletion.\`);
-            // Optionally throw an error, or just return if non-existence is not critical
-            // throw new Error(\`Command with ID '${commandId}' not found.`);
+        .showWarningMessage(
+          `ScriptMate: Command with ID '${commandId}' not found for deletion.`
+        );
+      // Optionally throw an error, or just return if non-existence is not critical
+      // throw new Error(\`Command with ID '${commandId}' not found.`);
       return;
     }
     await this.saveCommands();
     this._onDidChangeCommands.fire();
+  }
+
+  private async autoPopulateDefaultPath(): Promise<void> {
+    try {
+      const config = vscode.workspace.getConfiguration("scriptmate");
+      await config.update(
+        "customCommandsPath",
+        this._customCommandsJsonPath,
+        vscode.ConfigurationTarget.Global
+      );
+      console.log(
+        "ScriptMate: Auto-populated customCommandsPath setting with default:",
+        this._customCommandsJsonPath
+      );
+    } catch (error) {
+      console.warn(
+        "ScriptMate: Failed to auto-populate customCommandsPath setting:",
+        error
+      );
+    }
   }
 }

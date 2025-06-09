@@ -4,6 +4,7 @@ import { CommandStore } from "./command-store";
 import { CustomCommandsViewProvider } from "./custom-commands-view-provider";
 import { ScriptDefinition } from "./command-definitions";
 import { ModalPanelManager } from "./webview/modal/modalPanelManager";
+import { SettingsPanelManager } from "./webview/settings/settingsPanelManager";
 
 export function activate(context: vscode.ExtensionContext) {
   console.log("ScriptMate extension is now active!");
@@ -12,6 +13,7 @@ export function activate(context: vscode.ExtensionContext) {
   commandStore.loadCommands();
 
   const modalPanelManager = new ModalPanelManager(context, commandStore);
+  const settingsPanelManager = new SettingsPanelManager(context);
 
   registerScriptMateCommands(context);
 
@@ -41,6 +43,12 @@ export function activate(context: vscode.ExtensionContext) {
         modalPanelManager.createOrShowModal(commandToEdit);
       }
     )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("scriptmate.internal.openSettings", () => {
+      settingsPanelManager.createOrShowSettingsPanel();
+    })
   );
 
   console.log("ScriptMate commands and view provider registered.");

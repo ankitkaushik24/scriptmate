@@ -133,10 +133,7 @@ export class CustomCommandsViewProvider implements vscode.WebviewViewProvider {
           break;
         }
         case "openSettings": {
-          vscode.commands.executeCommand(
-            "workbench.action.openSettings",
-            "scriptmate.customCommandsPath"
-          );
+          vscode.commands.executeCommand("scriptmate.internal.openSettings");
           break;
         }
         case "openEditModal":

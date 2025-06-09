@@ -59,15 +59,25 @@ export function getHtmlSidePanelWebview(
     <body>
         <div id="app">
         <div class="toolbar">
-            <div class="add-command-button-container">
-            <vscode-button
-                appearance="primary"
-                @click="openAddModal"
-                style="width: 100%"
-            >
-                <span class="codicon codicon-add"></span> Add New Script
-            </vscode-button>
-            </div>
+                <div class="buttons-container">
+                    <vscode-button
+                        class="add-btn"
+                        appearance="primary"
+                        @click="openAddModal"
+                        style="flex: 1"
+                    >
+                        <span class="codicon codicon-add"></span> Add New Script
+                    </vscode-button>
+                    <vscode-button
+                        class="settings-btn"
+                        appearance="secondary"
+                        @click="openSettings"
+                        style="min-width: 40px"
+                        title="Settings"
+                    >
+                        <span class="codicon codicon-settings-gear"></span>
+                    </vscode-button>
+                </div>
             <div class="search-bar-container">
             <vscode-text-field
                 placeholder="Search scripts..."

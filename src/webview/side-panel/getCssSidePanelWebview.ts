@@ -24,14 +24,18 @@ export function getCssSidePanelWebview() {
             display: flex;
             flex-direction: column;
         }
-        .add-command-button-container {
-            margin-bottom: 10px; /* Space below add button */
-            /* border-top: 1px solid var(--vscode-tree-tableColumnsBorder, var(--vscode-editor-widget-border)); */ /* Removed */
-            /* padding-top: 10px; */ /* Removed */
-            /* margin-top: auto; */ /* Removed */
+        .buttons-container {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .add-btn {
+            flex-grow: 1;
+        }
+        .settings-btn {
+            flex-shrink: 0;
         }
         .search-bar-container {
-            /* margin-bottom: 10px; */ /* Space between search and add button - now handled by add button container's margin */
         }
         vscode-text-field {
             width: 100%; /* Make search bar take full width */
@@ -75,7 +79,6 @@ export function getCssSidePanelWebview() {
         .actions vscode-button {
             margin-left: 5px;
         }
-        /* .add-command-button-container at the bottom styling was removed as it moved to the top */
         vscode-button {
             min-width: 20px; /* Ensure small icon buttons have some width */
         }

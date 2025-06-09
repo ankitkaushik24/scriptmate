@@ -51,10 +51,9 @@ ScriptMate contributes the following settings (accessible via `File > Preference
 
 ## Available Commands
 
-You can access ScriptMate commands through the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P` on macOS):
+You can access ScriptMate commands through the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P` on macOS) or from the activity bar:
 
 - **`ScriptMate: Execute Registered Script...`**: Prompts you to select one of your configured scripts to execute.
-- **`ScriptMate: Manage Custom Scripts`**: Opens the ScriptMate view in the Activity Bar, allowing you to add, edit, delete, and run your custom scripts.
 
 ## Example: `serveStagingFromDevtools.mjs`
 
@@ -63,7 +62,7 @@ ScriptMate can be used to run scripts like the included `src/scripts/serveStagin
 1.  Expects a `--curlString` argument.
 2.  Requires the `SCRIPTMATE_BASE_DIRECTORY` environment variable to be set (which can be configured via the `scriptmate.baseDirectory` setting if you adapt the extension to pass it or set it in `scriptmate.globalEnv`).
 3.  Changes to a `com.aw.dpa.ui.devtools` directory within the base directory.
-4.  Executes `npm run serveStaging -- <curlString>`.
+4.  Executes `npm run serveQa -- <curlString>`.
 
 To use this with ScriptMate, you would:
 
