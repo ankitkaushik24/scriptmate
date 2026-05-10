@@ -2,6 +2,14 @@
 // for the documentation about the tasks.json format
 {
 	"version": "2.0.0",
+	"inputs": [
+		{
+			"id": "openVsxPat",
+			"type": "promptString",
+			"description": "Open VSX personal access token (https://open-vsx.org/user-settings/tokens). Not saved; only used for this run.",
+			"password": true
+		}
+	],
 	"tasks": [
 		{
 			"type": "npm",
@@ -35,6 +43,37 @@
 				"npm: watch-tests"
 			],
 			"problemMatcher": []
+		},
+		{
+			"label": "Publish extension: Open VSX",
+			"type": "shell",
+			"command": "npm run publish:open-vsx",
+			"options": {
+				"cwd": "${workspaceFolder}",
+				"env": {
+					"OVSX_PAT": "${input:openVsxPat}"
+				}
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "always",
+				"panel": "shared",
+				"focus": true
+			}
+		},
+		{
+			"label": "Publish extension: Open VSX (OVSX_PAT already set)",
+			"type": "shell",
+			"command": "npm run publish:open-vsx",
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "always",
+				"panel": "shared",
+				"focus": true
+			}
 		}
 	]
 }

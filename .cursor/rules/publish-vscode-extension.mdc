@@ -1,0 +1,49 @@
+---
+description: Publish ScriptMate (VS Code Marketplace + Open VSX for Cursor) after updates
+globs: package.json,CHANGELOG.md
+alwaysApply: false
+---
+
+# Publish ScriptMate to the Marketplace
+
+When the user wants to ship a new version of this extension, follow this sequence.
+
+## Cursor / Open VSX (discoverable in Cursor’s extension search)
+
+Cursor uses the [Open VSX](https://open-vsx.org/) registry. Publish there whenever you ship so Cursor users can find ScriptMate.
+
+- **Authentication**: Create a token at [open-vsx.org → Access Tokens](https://open-vsx.org/user-settings/tokens). The tool must not echo or commit the token.
+  - **From Cursor**: Command Palette → **Tasks: Run Task** → **Publish extension: Open VSX** (prompts for the token; sets `OVSX_PAT` for that run only).
+  - **From terminal**: `export OVSX_PAT="<token>"` then `npm run publish:open-vsx`, or one shot: `OVSX_PAT="<token>" npm run publish:open-vsx`.
+
+`ovsx publish` runs the same `vscode:prepublish` → production webpack flow as `vsce`.
+
+## VS Code Marketplace (Microsoft)
+
+- **Authentication**: Publishing needs a VS Code Marketplace token in the environment. The tool must not echo or commit the token.
+  - Set: `export VSCE_PAT="<your_personal_access_token>"`
+  - Token needs **Marketplace (Publish)** scope (create via Azure DevOps / [Publishing extensions](https://code.visualstudio.com/api/working-with-extensions/publishing-extension)).
+
+## Release checklist
+
+1. **Changelog**: Update `CHANGELOG.md` for user-visible changes in the version being published.
+2. **Version**: Bump the `"version"` field in `package.json` if this version was already published, or use semver flags (see below).
+3. **Quality** (if time allows): Run `npm run lint` (and tests if applicable) before publishing.
+4. **Package contents**: Ensure `.vscodeignore` excludes dev artifacts (e.g. `.cursor/**`, stray `*.mp3`, source maps if undesired). Optionally run `npx vsce ls --tree` and fix ignores before publishing.
+
+## Publish commands
+
+From the repo root (`scriptmate`):
+
+| Goal | Command |
+|------|---------|
+| Produce a `.vsix` locally (smoke test install) | `npm run extension:vsix` |
+| Publish to Open VSX (Cursor) | Task **Publish extension: Open VSX**, or `OVSX_PAT=… npm run publish:open-vsx` |
+| Publish current `package.json` version (Marketplace) | `npm run extension:publish` |
+| Bump version and publish in one step | `npx vsce publish --semver patch` (or `minor` / `major`) |
+
+`vscode:prepublish` runs `npm run package` (production webpack) automatically when using `vsce publish` or `vsce package`.
+
+## After publish
+
+- Commit version/changelog changes and push so Git matches the Marketplace listing.
