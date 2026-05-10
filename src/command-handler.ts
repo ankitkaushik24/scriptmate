@@ -1,18 +1,20 @@
 import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
-import { ScriptDefinition } from "./command-definitions";
+import {
+  ScriptDefinition,
+  commandDisplayLabel,
+} from "./command-definitions";
 import { CommandStore } from "./command-store";
-
-const config = vscode.workspace.getConfiguration("scriptmate");
+import { resolveScriptWorkingDirectory } from "./execution-context";
 
 async function promptForArguments(
   context: vscode.ExtensionContext,
   commandDef: ScriptDefinition,
   currentArgValues: { [key: string]: string | boolean }
 ): Promise<void> {
-  const globalBaseDirectory = config.get<string>("baseDirectory");
-  const baseDirectory = commandDef.baseDirectory || globalBaseDirectory;
+  const resolvedCwd = resolveScriptWorkingDirectory(commandDef);
+  const trimmedCustom = commandDef.baseDirectory?.trim();
 
   function buildCommandString(args: {
     [key: string]: string | boolean;
@@ -41,9 +43,11 @@ async function promptForArguments(
 
   const finalArguments = buildCommandString(currentArgValues);
   const currentCommandPreview = `${commandDef.command}${finalArguments}`;
-  const executionLocationInfo = baseDirectory
-    ? `(Will run in: ${baseDirectory})`
-    : "(Base directory not set! Command may fail.)";
+  const executionLocationInfo = trimmedCustom
+    ? `(Will run in custom directory: ${trimmedCustom})`
+    : resolvedCwd
+      ? `(Will run in workspace folder: ${resolvedCwd})`
+      : "(No workspace folder open — terminal uses VS Code default cwd)";
 
   const quickPickItems: (vscode.QuickPickItem & {
     action?: "execute" | "edit";
@@ -70,18 +74,19 @@ async function promptForArguments(
     } else {
       displayValue = argDef.type === "string" ? "(not set)" : "(No)";
     }
-    let description = argDef.description;
+    let description = (argDef.description ?? "").trim();
     if (
       argDef.defaultValue !== undefined &&
       currentValue === argDef.defaultValue
     ) {
-      description += ` (default: ${
+      const defaultBit = ` (default: ${
         argDef.type === "boolean"
           ? argDef.defaultValue
             ? "Yes"
             : "No"
           : `\"${argDef.defaultValue}\"`
       })`;
+      description = description ? `${description}${defaultBit}` : defaultBit;
     }
     quickPickItems.push({
       label: `${argDef.name}`,
@@ -94,7 +99,7 @@ async function promptForArguments(
 
   const selectedItem = await vscode.window.showQuickPick(quickPickItems, {
     placeHolder:
-      "Review arguments or execute. Select an argument to modify it.",
+      "Review cwd (workspace vs custom path), arguments, then execute or edit an argument.",
     ignoreFocusOut: true,
   });
 
@@ -111,15 +116,16 @@ async function promptForArguments(
     const newEnv: { [key: string]: string | undefined } = {
       ...process.env,
       ...userGlobalEnv,
-      SCRIPTMATE_BASE_DIRECTORY:
-        commandDef.baseDirectory || config.get<string>("baseDirectory"),
     };
+    if (resolvedCwd !== undefined) {
+      newEnv.SCRIPTMATE_BASE_DIRECTORY = resolvedCwd;
+    }
 
     const terminalOptions: vscode.TerminalOptions = {
       name: path.basename(
         commandDef.command.split(" ")[0] || "scriptmate-script"
       ),
-      cwd: baseDirectory,
+      cwd: resolvedCwd,
       env: newEnv,
     };
 
@@ -142,7 +148,9 @@ async function promptForArguments(
     if (argToEdit.type === "string") {
       const input = await vscode.window.showInputBox({
         prompt: `Enter new value for --${argToEdit.name}`,
-        placeHolder: argToEdit.description,
+        placeHolder:
+          argToEdit.description?.trim() ||
+          `Value for --${argToEdit.name}`,
         value:
           (currentArgValues[argToEdit.name] as string) ||
           (argToEdit.defaultValue as string) ||
@@ -170,7 +178,9 @@ async function promptForArguments(
           { label: "No", description: "Set flag to false", value: false },
         ],
         {
-          placeHolder: argToEdit.description || `Enable --${argToEdit.name}?`,
+          placeHolder:
+            argToEdit.description?.trim() ||
+            `Enable --${argToEdit.name}?`,
           ignoreFocusOut: true,
         }
       );
@@ -226,7 +236,7 @@ export function registerScriptMateCommands(context: vscode.ExtensionContext) {
       } else {
         const commandOptions = availableCommands.map(
           (cmd: ScriptDefinition) => ({
-            label: cmd.label,
+            label: commandDisplayLabel(cmd),
             description: cmd.description,
             id: cmd.id,
           })

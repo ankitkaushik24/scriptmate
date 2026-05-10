@@ -25,7 +25,7 @@ export function getHtmlSettingsWebview(
     )
   );
 
-  return `
+  return /*html*/ `
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -96,20 +96,6 @@ export function getHtmlSettingsWebview(
     <body>
         <div class="container">
             <h1>ScriptMate Settings</h1>
-            
-            <div class="setting-group">
-                <h2>General Settings</h2>
-                <div class="setting-row">
-                    <label for="baseDirectory">Base Directory</label>
-                    <div class="setting-description">
-                        The default directory containing your scripts. This is used as a default argument if a script requires it.
-                    </div>
-                    <div class="input-row">
-                        <vscode-text-field readonly id="baseDirectory" placeholder="e.g., /Users/me/myprojects"></vscode-text-field>
-                        <vscode-button id="selectBaseDirectory">Browse</vscode-button>
-                    </div>
-                </div>
-            </div>
 
             <div class="setting-group">
                 <h2>Custom Commands</h2>
@@ -134,9 +120,7 @@ export function getHtmlSettingsWebview(
             const vscode = acquireVsCodeApi();
             
             // Get DOM elements
-            const baseDirectoryInput = document.getElementById('baseDirectory');
             const customCommandsPathInput = document.getElementById('customCommandsPath');
-            const selectBaseDirButton = document.getElementById('selectBaseDirectory');
             const selectCommandsFileButton = document.getElementById('selectCustomCommandsFile');
             const saveButton = document.getElementById('saveSettings');
 
@@ -150,11 +134,7 @@ export function getHtmlSettingsWebview(
                 const message = event.data;
                 switch (message.type) {
                     case 'currentSettings':
-                        baseDirectoryInput.value = message.settings.baseDirectory || '';
                         customCommandsPathInput.value = message.settings.customCommandsPath || '';
-                        break;
-                    case 'directorySelected':
-                        baseDirectoryInput.value = message.path;
                         break;
                     case 'fileSelected':
                         customCommandsPathInput.value = message.path;
@@ -164,14 +144,6 @@ export function getHtmlSettingsWebview(
                         // No need to show additional messages from the webview
                         break;
                 }
-            });
-
-            // Browse for base directory
-            selectBaseDirButton.addEventListener('click', () => {
-                vscode.postMessage({ 
-                    type: 'selectDirectory',
-                    currentPath: baseDirectoryInput.value 
-                });
             });
 
             // Browse for custom commands file
@@ -185,7 +157,6 @@ export function getHtmlSettingsWebview(
             // Save settings
             saveButton.addEventListener('click', () => {
                 const settings = {
-                    baseDirectory: baseDirectoryInput.value,
                     customCommandsPath: customCommandsPathInput.value
                 };
                 vscode.postMessage({ 

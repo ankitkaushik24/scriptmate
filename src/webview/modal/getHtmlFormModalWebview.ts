@@ -64,7 +64,7 @@ export function getHtmlForModalWebview(
                 
                 <div v-if="!loading">
                     <div class="form-group">
-                        <vscode-text-field v-model="formData.label">Label (for Quick Pick & UI):</vscode-text-field>
+                        <vscode-text-field v-model="formData.label" placeholder="Defaults to command string if empty">Label (optional, Quick Pick & UI):</vscode-text-field>
                     </div>
                     <div class="form-group">
                         <vscode-text-area v-model="formData.description" rows="2">Description (optional):</vscode-text-area>
@@ -73,8 +73,19 @@ export function getHtmlForModalWebview(
                         <vscode-text-field v-model="formData.command">Command String (e.g., zx src/my.mjs, npm run task):</vscode-text-field>
                     </div>
                     <div class="form-group">
-                         <vscode-text-field v-model="formData.baseDirectory" readonly placeholder="Inherits global setting if blank">Base Directory:</vscode-text-field>
+                        <vscode-radio-group :value="cwdMode" @change="onCwdModeChange">
+                            <label slot="label">Working directory</label>
+                            <vscode-radio value="workspace">Workspace folder (first open folder)</vscode-radio>
+                            <vscode-radio value="custom">Custom directory</vscode-radio>
+                        </vscode-radio-group>
+                    </div>
+                    <div class="form-group cwd-custom-row" v-if="cwdMode === 'custom'">
+                         <vscode-text-field v-model="formData.baseDirectory" readonly placeholder="Absolute path">Directory:</vscode-text-field>
                          <vscode-button appearance="secondary" @click="selectBaseDirectory">Browse...</vscode-button>
+                    </div>
+                    <div class="form-group">
+                        <vscode-text-field v-model="formData.shellAlias" placeholder="e.g. deploy_staging (optional)">Shell function name:</vscode-text-field>
+                        <div class="field-hint">Optional. Name for a function in your shell rc (same identifier rules). Forwards extra args with "$@". Written on save.</div>
                     </div>
 
                     <div class="form-section-title">Arguments ({{ formData.args.length }})</div>
@@ -86,7 +97,7 @@ export function getHtmlForModalWebview(
                             <vscode-text-field v-model="arg.name">Name (e.g., ticketId, filePath):</vscode-text-field>
                         </div>
                         <div class="form-group">
-                            <vscode-text-area v-model="arg.description" rows="2">Description (for prompts):</vscode-text-area>
+                            <vscode-text-area v-model="arg.description" rows="2" placeholder="Defaults to argument name">Description (optional, for prompts):</vscode-text-area>
                         </div>
                         <div class="form-group">
                             <label>Type</label>
@@ -134,6 +145,7 @@ export function getHtmlForModalWebview(
                         const isEditMode = ref(false);
                         const originalId = ref(null); // To track original ID in edit mode
                         const saveError = ref(null);
+                        const cwdMode = ref('workspace');
 
                         const formData = reactive({
                             id: '', // Will be populated by initialData
@@ -141,8 +153,11 @@ export function getHtmlForModalWebview(
                             description: '',
                             command: '',
                             baseDirectory: '',
+                            shellAlias: '',
                             args: []
                         });
+
+                        const shellAliasPattern = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 
                         const resetForm = (data = {}, isNew = false) => {
                             formData.id = data.id || ''; // ID will be present now
@@ -150,14 +165,27 @@ export function getHtmlForModalWebview(
                             formData.description = data.description || '';
                             formData.command = data.command || '';
                             formData.baseDirectory = data.baseDirectory || '';
+                            formData.shellAlias = data.shellAlias || '';
                             formData.args = JSON.parse(JSON.stringify(data.args || [])); // Deep copy for args
+                            cwdMode.value = (formData.baseDirectory || '').trim() ? 'custom' : 'workspace';
+                            if (cwdMode.value === 'workspace') {
+                                formData.baseDirectory = '';
+                            }
                             isEditMode.value = !isNew; // Use isNew to determine edit mode
                             originalId.value = !isNew ? data.id : null; // Only set originalId if actually editing
                             loading.value = false;
                             saveError.value = null;
                         };
+
+                        const onCwdModeChange = (e) => {
+                            cwdMode.value = e.target.value;
+                            if (cwdMode.value === 'workspace') {
+                                formData.baseDirectory = '';
+                            }
+                        };
                         
                         const selectBaseDirectory = () => {
+                            cwdMode.value = 'custom';
                             vscode.postMessage({ type: 'select-folder' });
                         };
 
@@ -179,15 +207,23 @@ export function getHtmlForModalWebview(
                         const save = () => {
                             saveError.value = null; // Clear previous error
                             // Basic validation
-                            if (!formData.id || !formData.label || !formData.command) {
-                                saveError.value = 'ID, Label, and Command String are required.';
+                            if (!formData.id || !String(formData.command || '').trim()) {
+                                saveError.value = 'ID and Command String are required.';
                                 return;
                             }
                              for (const arg of formData.args) {
-                                if (!arg.name || !arg.description) {
-                                    saveError.value = 'All arguments must have a Name and Description.';
+                                if (!String(arg.name || '').trim()) {
+                                    saveError.value = 'Each argument must have a Name.';
                                     return;
                                 }
+                            }
+                            const aliasTrim = (formData.shellAlias || '').trim();
+                            if (aliasTrim && !shellAliasPattern.test(aliasTrim)) {
+                                saveError.value = 'Shell alias must be a valid identifier (letters, digits, underscore; cannot start with a digit).';
+                                return;
+                            }
+                            if (cwdMode.value === 'workspace') {
+                                formData.baseDirectory = '';
                             }
                             // Convert boolean defaultValue to actual boolean if it's a string from dropdown
                             formData.args.forEach(arg => {
@@ -234,12 +270,14 @@ export function getHtmlForModalWebview(
                         return {
                             loading,
                             formData,
+                            cwdMode,
                             isEditMode,
                             addArgument,
                             removeArgument,
                             save,
                             cancel,
                             selectBaseDirectory,
+                            onCwdModeChange,
                             saveError
                         };
                     }

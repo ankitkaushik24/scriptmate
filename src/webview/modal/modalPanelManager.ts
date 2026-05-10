@@ -1,7 +1,10 @@
 import * as vscode from "vscode";
 import * as crypto from "crypto";
 import { CommandStore } from "../../command-store";
-import { ScriptDefinition } from "../../command-definitions";
+import {
+  ScriptDefinition,
+  commandDisplayLabel,
+} from "../../command-definitions";
 import { getHtmlForModalWebview } from "./getHtmlFormModalWebview";
 
 export class ModalPanelManager {
@@ -20,17 +23,14 @@ export class ModalPanelManager {
       : undefined;
 
     const isNewCommand = !commandToEdit;
-    const globalBaseDirectory = vscode.workspace
-      .getConfiguration("scriptmate")
-      .get<string>("baseDirectory");
 
     const commandDataForModal: ScriptDefinition = commandToEdit
-      ? { baseDirectory: globalBaseDirectory, ...commandToEdit }
+      ? { ...commandToEdit }
       : ({
           id: crypto.randomUUID(),
-          label: "",
           command: "",
-          baseDirectory: globalBaseDirectory || "",
+          baseDirectory: "",
+          shellAlias: "",
           args: [],
         } as ScriptDefinition);
 
@@ -47,7 +47,7 @@ export class ModalPanelManager {
       "scriptmate.editCommandModal",
       isNewCommand
         ? "Add New ScriptMate Script"
-        : `Edit: ${commandDataForModal.label}`,
+        : `Edit: ${commandDisplayLabel(commandDataForModal)}`,
       column || vscode.ViewColumn.One,
       {
         enableScripts: true,
@@ -85,7 +85,9 @@ export class ModalPanelManager {
               if (commandToEdit && commandToEdit.id === scriptDef.id) {
                 await this.commandStore.updateCommand(scriptDef);
                 vscode.window.showInformationMessage(
-                  `ScriptMate: Command "${scriptDef.label}" updated.`
+                  `ScriptMate: Command "${commandDisplayLabel(
+                    scriptDef
+                  )}" updated.`
                 );
               } else if (
                 this.commandStore
@@ -104,12 +106,14 @@ export class ModalPanelManager {
                 await this.commandStore.deleteCommand(commandToEdit.id);
                 await this.commandStore.addCommand(scriptDef);
                 vscode.window.showInformationMessage(
-                  `ScriptMate: Command "${commandToEdit.label}" updated to "${scriptDef.label}" with new ID.`
+                  `ScriptMate: Command "${commandDisplayLabel(
+                    commandToEdit
+                  )}" updated to "${commandDisplayLabel(scriptDef)}" with new ID.`
                 );
               } else {
                 await this.commandStore.addCommand(scriptDef);
                 vscode.window.showInformationMessage(
-                  `ScriptMate: Command "${scriptDef.label}" added.`
+                  `ScriptMate: Command "${commandDisplayLabel(scriptDef)}" added.`
                 );
               }
               this.panel?.dispose();

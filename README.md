@@ -13,7 +13,8 @@ Stop juggling terminal windows and context-switching. With ScriptMate, your scri
     - Set `defaultValue` for arguments.
     - Mark arguments as `required`.
     - Flag string arguments as `isPositional`.
-  - Set a script-specific `baseDirectory` to override the global setting.
+  - Choose **working directory** per script: **Workspace folder** (first open folder) or **Custom** with an absolute path (`baseDirectory` in JSON).
+  - Optionally set **`shellAlias`**: a POSIX-style function name (`[a-zA-Z_][a-zA-Z0-9_]*`). After a successful save, ScriptMate inserts or updates a marked block in `~/.zshrc` or `~/.bashrc` (from `$SHELL`, or a one-time prompt) defining a **shell function** with that name—same resolved working directory and command as ScriptMate, with `"$@"` forwarded so you can pass extra arguments from the terminal. Clearing the field or deleting the script removes the managed block. Names must be unique across all scripts.
 - **Quick Script Execution**:
   - Run registered scripts directly from the ScriptMate view.
   - Context menu integration: Execute scripts on `.mjs` or `.sh` files directly from the Explorer or Editor title context menus (via the "ScriptMate: Execute Registered Script..." command).
@@ -34,9 +35,6 @@ ScriptMate contributes the following settings (accessible via `File > Preference
   - **Description**: Absolute path to a JSON file containing your custom ScriptMate command definitions. This is the heart of your ScriptMate setup.
   - **Example**: `/Users/me/my_scriptmate_commands.json` or `C:\Users\me\my_scriptmate_commands.json`.
   - **Default**: `""` (You **must** set this to use custom commands via the UI).
-- **`scriptmate.baseDirectory`**:
-  - **Description**: The absolute path to the directory containing your scripts or projects that your scripts might operate on. This can be used as a default argument or an environment variable within your scripts if needed (e.g., the `serveStagingFromDevtools.mjs` script uses an environment variable `SCRIPTMATE_BASE_DIRECTORY` which can be sourced from this setting).
-  - **Example**: `/Users/me/myprojects`.
 - **`scriptmate.globalEnv`**:
   - **Description**: Global environment variables to set for all executed scripts. Values can use supported VS Code variable syntax (e.g., `${workspaceFolder}`, `${userHome}`, `${config:your.setting}`, `${env:SYS_VAR}`).
   - **Default**: `{}`
@@ -60,14 +58,14 @@ You can access ScriptMate commands through the Command Palette (`Ctrl+Shift+P` o
 ScriptMate can be used to run scripts like the included `src/scripts/serveStagingFromDevtools.mjs`. This script:
 
 1.  Expects a `--curlString` argument.
-2.  Requires the `SCRIPTMATE_BASE_DIRECTORY` environment variable to be set (which can be configured via the `scriptmate.baseDirectory` setting if you adapt the extension to pass it or set it in `scriptmate.globalEnv`).
+2.  Expects `SCRIPTMATE_BASE_DIRECTORY` when ScriptMate runs the script (the extension sets it to the resolved working directory: per-script `baseDirectory`, or the first workspace folder when that field is blank).
 3.  Changes to a `com.aw.dpa.ui.devtools` directory within the base directory.
 4.  Executes `npm run serveQa -- <curlString>`.
 
 To use this with ScriptMate, you would:
 
-1.  Set your `scriptmate.baseDirectory` in VS Code settings.
-2.  Potentially add `SCRIPTMATE_BASE_DIRECTORY`: `"${config:scriptmate.baseDirectory}"` to your `scriptmate.globalEnv` settings.
+1.  Open the repo as a workspace (or set per-script `baseDirectory` to the project root).
+2.  Optionally add extra env in `scriptmate.globalEnv` if the script needs more variables.
 3.  Define a command in your `customCommands.json`:
     ```json
     [
@@ -77,6 +75,7 @@ To use this with ScriptMate, you would:
         "description": "Runs npm run serve:qa",
         "command": "npm run serve:qa",
         "baseDirectory": "/path/to/your/project",
+        "shellAlias": "serve_qa",
         "args": [
           {
             "name": "authToken",
@@ -94,6 +93,11 @@ To use this with ScriptMate, you would:
 
 - Please report any issues on the GitHub repository issues page.
 
+### Shell functions (`shellAlias`)
+
+- ScriptMate **edits your shell rc file** between marker comments and writes a **function**, not a one-line `alias`, so quoting stays simple (only the `cd` path is single-quoted), you can rely on normal shell syntax in your command, and extra CLI args are forwarded via `"$@"`. Merge conflicts are still possible if you edit the same region by hand; fish and other shells are not targeted automatically (pick `~/.zshrc` / `~/.bashrc` when prompted).
+- Reload your terminal or run `source ~/.zshrc` (or the file you chose) after the first write.
+
 ## Release Notes
 
 ### 0.0.1
@@ -102,16 +106,5 @@ To use this with ScriptMate, you would:
 - Features: Custom script definition via JSON, argument prompting, `node`, `zx` and shell script execution, dedicated Activity Bar view for script management.
 
 ---
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-- [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## For more information
-
-- [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-- [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
 
 **Enjoy Scripting with ScriptMate!**

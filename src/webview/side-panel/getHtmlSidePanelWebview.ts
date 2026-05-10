@@ -95,7 +95,7 @@ export function getHtmlSidePanelWebview(
             class="command-item"
             >
             <div>
-                <div class="command-label">{{ command.label }}</div>
+                <div class="command-label">{{ displayLabel(command) }}</div>
                 <div v-if="command.description" class="command-description">
                 {{ command.description }}
                 </div>
@@ -117,7 +117,7 @@ export function getHtmlSidePanelWebview(
                 </vscode-button>
                 <vscode-button
                 appearance="icon"
-                @click="deleteCommand(command.id, command.label)"
+                @click="deleteCommand(command.id, displayLabel(command))"
                 title="Delete Script"
                 >
                 <span class="codicon codicon-trash"></span>
@@ -189,19 +189,33 @@ export function getHtmlSidePanelWebview(
                 postMessage({ type: "openSettings" });
             };
 
+            const displayLabel = (command) => {
+                const l = command.label && String(command.label).trim();
+                return l || command.command || command.id;
+            };
+
             const filteredCommands = computed(() => {
                 if (!searchTerm.value) {
                 return commands.value;
                 }
                 const lowerSearchTerm = searchTerm.value.toLowerCase();
                 return commands.value.filter((command) => {
+                const labelText =
+                    command.label && String(command.label).trim();
                 const labelMatch =
-                    command.label &&
-                    command.label.toLowerCase().includes(lowerSearchTerm);
+                    labelText &&
+                    labelText.toLowerCase().includes(lowerSearchTerm);
+                const commandMatch =
+                    command.command &&
+                    command.command
+                        .toLowerCase()
+                        .includes(lowerSearchTerm);
                 const descriptionMatch =
                     command.description &&
-                    command.description.toLowerCase().includes(lowerSearchTerm);
-                return labelMatch || descriptionMatch;
+                    command.description
+                        .toLowerCase()
+                        .includes(lowerSearchTerm);
+                return labelMatch || commandMatch || descriptionMatch;
                 });
             });
 
@@ -225,6 +239,7 @@ export function getHtmlSidePanelWebview(
                 commands, // keep original commands for empty state logic
                 searchTerm,
                 filteredCommands,
+                displayLabel,
                 runCommand,
                 openEditModal,
                 openAddModal,

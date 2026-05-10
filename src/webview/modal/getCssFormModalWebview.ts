@@ -17,6 +17,21 @@ export function getCssFormModalWebview() {
         .form-group {
             margin-bottom: 15px;
         }
+        .cwd-custom-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .cwd-custom-row vscode-text-field {
+            flex: 1;
+            min-width: 120px;
+        }
+        .field-hint {
+            font-size: 12px;
+            color: var(--vscode-descriptionForeground);
+            margin-top: 6px;
+        }
         vscode-text-field, vscode-text-area, vscode-dropdown {
             width: 100%;
         }

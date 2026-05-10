@@ -2,6 +2,11 @@ import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
 import { ScriptDefinition } from "./command-definitions";
+import {
+  normalizeScriptDefinition,
+  validateScriptDefinitionForPersistence,
+} from "./script-persistence";
+import { syncShellAliasTransition } from "./shell-profile-alias";
 
 const SCRIPTMATE_COMMANDS_JSON = "scriptmate-commands.json";
 
@@ -94,7 +99,7 @@ export class CommandStore {
           // Basic validation (can be expanded)
           if (
             !Array.isArray(this._commands) ||
-            !this._commands.every((cmd) => cmd.id && cmd.label && cmd.command)
+            !this._commands.every((cmd) => cmd.id && cmd.command)
           ) {
             vscode.window.showErrorMessage(
               `Error loading ScriptMate commands: ${this._customCommandsJsonPath} contains invalid data.`
@@ -142,15 +147,25 @@ export class CommandStore {
   }
 
   public async addCommand(command: ScriptDefinition): Promise<void> {
-    if (this._commands.some((c) => c.id === command.id)) {
+    const normalized = normalizeScriptDefinition(command);
+    if (this._commands.some((c) => c.id === normalized.id)) {
       vscode.window.showErrorMessage(
-        `ScriptMate: Command with ID '${command.id}' already exists.`
+        `ScriptMate: Command with ID '${normalized.id}' already exists.`
       );
-      throw new Error(`Command with ID '${command.id}' already exists.`);
+      throw new Error(`Command with ID '${normalized.id}' already exists.`);
     }
-    this._commands.push(command);
+    const validationError = validateScriptDefinitionForPersistence(
+      normalized,
+      this._commands
+    );
+    if (validationError) {
+      vscode.window.showErrorMessage(`ScriptMate: ${validationError}`);
+      throw new Error(validationError);
+    }
+    this._commands.push(normalized);
     await this.saveCommands();
     this._onDidChangeCommands.fire();
+    await syncShellAliasTransition(this.context, undefined, normalized);
   }
 
   public async updateCommand(updatedCommand: ScriptDefinition): Promise<void> {
@@ -161,25 +176,35 @@ export class CommandStore {
       );
       throw new Error(`Command with ID '${updatedCommand.id}' not found.`);
     }
-    this._commands[index] = updatedCommand;
+    const previous = this._commands[index];
+    const normalized = normalizeScriptDefinition(updatedCommand);
+    const validationError = validateScriptDefinitionForPersistence(
+      normalized,
+      this._commands
+    );
+    if (validationError) {
+      vscode.window.showErrorMessage(`ScriptMate: ${validationError}`);
+      throw new Error(validationError);
+    }
+    this._commands[index] = normalized;
     await this.saveCommands();
     this._onDidChangeCommands.fire();
+    await syncShellAliasTransition(this.context, previous, normalized);
   }
 
   public async deleteCommand(commandId: string): Promise<void> {
+    const removed = this._commands.find((c) => c.id === commandId);
     const initialLength = this._commands.length;
     this._commands = this._commands.filter((c) => c.id !== commandId);
     if (this._commands.length === initialLength) {
-      vscode.window
-        .showWarningMessage(
-          `ScriptMate: Command with ID '${commandId}' not found for deletion.`
-        );
-      // Optionally throw an error, or just return if non-existence is not critical
-      // throw new Error(\`Command with ID '${commandId}' not found.`);
+      vscode.window.showWarningMessage(
+        `ScriptMate: Command with ID '${commandId}' not found for deletion.`
+      );
       return;
     }
     await this.saveCommands();
     this._onDidChangeCommands.fire();
+    await syncShellAliasTransition(this.context, removed, undefined);
   }
 
   private async autoPopulateDefaultPath(): Promise<void> {

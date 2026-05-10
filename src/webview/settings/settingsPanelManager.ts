@@ -55,9 +55,6 @@ export class SettingsPanelManager {
           case "getSettings":
             await this.sendCurrentSettings();
             break;
-          case "selectDirectory":
-            await this.selectDirectory(message.currentPath);
-            break;
           case "selectFile":
             await this.selectFile(message.currentPath);
             break;
@@ -87,7 +84,6 @@ export class SettingsPanelManager {
 
     const config = vscode.workspace.getConfiguration("scriptmate");
     const settings = {
-      baseDirectory: config.get<string>("baseDirectory") || "",
       customCommandsPath: config.get<string>("customCommandsPath") || "",
     };
 
@@ -95,35 +91,6 @@ export class SettingsPanelManager {
       type: "currentSettings",
       settings: settings,
     });
-  }
-
-  private async selectDirectory(currentPath?: string): Promise<void> {
-    if (!SettingsPanelManager.currentPanel) {
-      return;
-    }
-
-    const options: vscode.OpenDialogOptions = {
-      canSelectFolders: true,
-      canSelectFiles: false,
-      canSelectMany: false,
-      openLabel: "Select Base Directory",
-    };
-
-    if (currentPath && currentPath.trim()) {
-      try {
-        options.defaultUri = vscode.Uri.file(currentPath);
-      } catch (error) {
-        // If current path is invalid, ignore and let user browse from default location
-      }
-    }
-
-    const result = await vscode.window.showOpenDialog(options);
-    if (result && result[0]) {
-      SettingsPanelManager.currentPanel.webview.postMessage({
-        type: "directorySelected",
-        path: result[0].fsPath,
-      });
-    }
   }
 
   private async selectFile(currentPath?: string): Promise<void> {
@@ -160,7 +127,6 @@ export class SettingsPanelManager {
   }
 
   private async saveSettings(settings: {
-    baseDirectory: string;
     customCommandsPath: string;
   }): Promise<void> {
     if (!SettingsPanelManager.currentPanel) {
@@ -169,13 +135,6 @@ export class SettingsPanelManager {
 
     try {
       const config = vscode.workspace.getConfiguration("scriptmate");
-
-      // Update base directory
-      await config.update(
-        "baseDirectory",
-        settings.baseDirectory.trim() || undefined,
-        vscode.ConfigurationTarget.Global
-      );
 
       // Update custom commands path
       await config.update(
