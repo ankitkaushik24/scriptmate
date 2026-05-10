@@ -1,5 +1,4 @@
-export function getCssFormModalWebview() {
-  return /*css*/ `
+
         body {
             font-family: var(--vscode-font-family);
             color: var(--vscode-editor-foreground);
@@ -65,5 +64,4 @@ export function getCssFormModalWebview() {
             margin-left: 5px;
             margin-bottom: 0; /* Align with checkbox */
         }
-  `;
-}
+  

@@ -1,5 +1,4 @@
-export function getCssSidePanelWebview() {
-  return /*css*/ `
+
         body {
             font-family: var(--vscode-font-family);
             color: var(--vscode-editor-foreground);
@@ -98,5 +97,4 @@ export function getCssSidePanelWebview() {
             color: var(--vscode-descriptionForeground);
             padding: 10px;
         }
-  `;
-}
+  

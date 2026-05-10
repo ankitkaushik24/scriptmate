@@ -52,28 +52,29 @@ export class ModalPanelManager {
       {
         enableScripts: true,
         localResourceRoots: [
+          vscode.Uri.joinPath(this.context.extensionUri, "dist"),
           vscode.Uri.joinPath(
             this.context.extensionUri,
             "node_modules",
             "@vscode",
-            "codicons"
+            "codicons",
           ),
           vscode.Uri.joinPath(
             this.context.extensionUri,
             "node_modules",
             "@vscode",
-            "webview-ui-toolkit"
+            "webview-ui-toolkit",
           ),
         ],
         // retainContextWhenHidden: true, // Optionally
-      }
+      },
     );
 
     this.panel.webview.html = getHtmlForModalWebview(
       this.panel.webview,
       this.context,
       commandDataForModal,
-      isNewCommand
+      isNewCommand,
     );
 
     this.panel.webview.onDidReceiveMessage(
@@ -86,8 +87,8 @@ export class ModalPanelManager {
                 await this.commandStore.updateCommand(scriptDef);
                 vscode.window.showInformationMessage(
                   `ScriptMate: Command "${commandDisplayLabel(
-                    scriptDef
-                  )}" updated.`
+                    scriptDef,
+                  )}" updated.`,
                 );
               } else if (
                 this.commandStore
@@ -95,7 +96,7 @@ export class ModalPanelManager {
                   .some((c) => c.id === scriptDef.id)
               ) {
                 vscode.window.showErrorMessage(
-                  `ScriptMate: Command with ID "${scriptDef.id}" already exists. Please choose a unique ID.`
+                  `ScriptMate: Command with ID "${scriptDef.id}" already exists. Please choose a unique ID.`,
                 );
                 this.panel?.webview.postMessage({
                   type: "saveError",
@@ -107,19 +108,19 @@ export class ModalPanelManager {
                 await this.commandStore.addCommand(scriptDef);
                 vscode.window.showInformationMessage(
                   `ScriptMate: Command "${commandDisplayLabel(
-                    commandToEdit
-                  )}" updated to "${commandDisplayLabel(scriptDef)}" with new ID.`
+                    commandToEdit,
+                  )}" updated to "${commandDisplayLabel(scriptDef)}" with new ID.`,
                 );
               } else {
                 await this.commandStore.addCommand(scriptDef);
                 vscode.window.showInformationMessage(
-                  `ScriptMate: Command "${commandDisplayLabel(scriptDef)}" added.`
+                  `ScriptMate: Command "${commandDisplayLabel(scriptDef)}" added.`,
                 );
               }
               this.panel?.dispose();
             } catch (error) {
               vscode.window.showErrorMessage(
-                `Failed to save command: ${error}`
+                `Failed to save command: ${error}`,
               );
               this.panel?.webview.postMessage({
                 type: "saveError",
@@ -156,7 +157,7 @@ export class ModalPanelManager {
         }
       },
       undefined,
-      this.context.subscriptions
+      this.context.subscriptions,
     );
 
     this.panel.onDidDispose(
@@ -164,7 +165,7 @@ export class ModalPanelManager {
         this.panel = undefined;
       },
       null,
-      this.context.subscriptions
+      this.context.subscriptions,
     );
   }
 }
