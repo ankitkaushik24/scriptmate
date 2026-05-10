@@ -4,7 +4,7 @@ import { getCssSidePanelWebview } from "./getCssSidePanelWebview";
 
 export function getHtmlSidePanelWebview(
   webviewView: vscode.WebviewView,
-  context: vscode.ExtensionContext
+  context: vscode.ExtensionContext,
 ): string {
   const webview = webviewView.webview;
   const vueUri = "https://unpkg.com/vue@3/dist/vue.global.js";
@@ -17,8 +17,8 @@ export function getHtmlSidePanelWebview(
       "@vscode",
       "webview-ui-toolkit",
       "dist",
-      "toolkit.min.js"
-    )
+      "toolkit.min.js",
+    ),
   );
   const codiconsUri = webview.asWebviewUri(
     vscode.Uri.joinPath(
@@ -27,8 +27,8 @@ export function getHtmlSidePanelWebview(
       "@vscode",
       "codicons",
       "dist",
-      "codicon.css"
-    )
+      "codicon.css",
+    ),
   );
   const nonce = getNonce();
 
@@ -100,6 +100,9 @@ export function getHtmlSidePanelWebview(
                 {{ command.description }}
                 </div>
             </div>
+            <vscode-tag v-if="command.shellAlias">
+             <span class="alias-tag">{{ command.shellAlias }}</span>
+            </vscode-tag>
             <div class="actions">
                 <vscode-button
                 appearance="icon"

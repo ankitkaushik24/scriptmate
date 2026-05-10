@@ -62,6 +62,12 @@ export function getCssSidePanelWebview() {
         .command-item:last-child {
             border-bottom: none;
         }
+        .command-item vscode-tag {
+            margin-right: auto;
+        }
+        .command-item .alias-tag {
+            text-transform: none;
+        }
         .command-label {
             cursor: default;
             flex-grow: 1;
