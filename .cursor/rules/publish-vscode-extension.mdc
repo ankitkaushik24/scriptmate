@@ -16,13 +16,18 @@ Cursor uses the [Open VSX](https://open-vsx.org/) registry. Publish there whenev
   - **From Cursor**: Command Palette → **Tasks: Run Task** → **Publish extension: Open VSX** (prompts for the token; sets `OVSX_PAT` for that run only).
   - **From terminal**: `export OVSX_PAT="<token>"` then `npm run publish:open-vsx`, or one shot: `OVSX_PAT="<token>" npm run publish:open-vsx`.
 
-`ovsx publish` runs the same `vscode:prepublish` → production webpack flow as `vsce`.
+`ovsx publish` and `vsce publish`/`package` both invoke **`vscode:prepublish`**, which runs **`npm run package`** (this repo: Vite webview builds + production webpack).
+
+## VS Code Marketplace tasks (from Cursor / VS Code)
+
+- **Tasks: Run Task** → **Publish extension: VS Code Marketplace** — prompts for PAT; sets `VSCE_PAT` for that run only.
+- **Publish extension: VS Code Marketplace (VSCE_PAT already set)** — uses an existing shell `VSCE_PAT`.
 
 ## VS Code Marketplace (Microsoft)
 
-- **Authentication**: Publishing needs a VS Code Marketplace token in the environment. The tool must not echo or commit the token.
-  - Set: `export VSCE_PAT="<your_personal_access_token>"`
-  - Token needs **Marketplace (Publish)** scope (create via Azure DevOps / [Publishing extensions](https://code.visualstudio.com/api/working-with-extensions/publishing-extension)).
+- **Authentication**: Marketplace token in the environment (`VSCE_PAT`). The tool must not echo or commit the token.
+  - **Terminal**: `export VSCE_PAT="<your_personal_access_token>"` then `npm run extension:publish`
+  - Token needs **Marketplace (Publish)** scope (Azure DevOps / [Publishing extensions](https://code.visualstudio.com/api/working-with-extensions/publishing-extension)).
 
 ## Release checklist
 
@@ -39,10 +44,10 @@ From the repo root (`scriptmate`):
 |------|---------|
 | Produce a `.vsix` locally (smoke test install) | `npm run extension:vsix` |
 | Publish to Open VSX (Cursor) | Task **Publish extension: Open VSX**, or `OVSX_PAT=… npm run publish:open-vsx` |
-| Publish current `package.json` version (Marketplace) | `npm run extension:publish` |
+| Publish to Marketplace (VS Code) | Task **Publish extension: VS Code Marketplace**, or `VSCE_PAT=… npm run extension:publish` |
 | Bump version and publish in one step | `npx vsce publish --semver patch` (or `minor` / `major`) |
 
-`vscode:prepublish` runs `npm run package` (production webpack) automatically when using `vsce publish` or `vsce package`.
+`vscode:prepublish` runs `npm run package` automatically when using `vsce`, `vsce package`, or `ovsx publish`.
 
 ## After publish
 

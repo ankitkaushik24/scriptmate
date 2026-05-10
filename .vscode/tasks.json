@@ -8,6 +8,12 @@
 			"type": "promptString",
 			"description": "Open VSX personal access token (https://open-vsx.org/user-settings/tokens). Not saved; only used for this run.",
 			"password": true
+		},
+		{
+			"id": "vscePat",
+			"type": "promptString",
+			"description": "Azure DevOps PAT with Marketplace (Publish) scope. https://code.visualstudio.com/api/working-with-extensions/publishing-extension Not saved.",
+			"password": true
 		}
 	],
 	"tasks": [
@@ -65,6 +71,37 @@
 			"label": "Publish extension: Open VSX (OVSX_PAT already set)",
 			"type": "shell",
 			"command": "npm run publish:open-vsx",
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "always",
+				"panel": "shared",
+				"focus": true
+			}
+		},
+		{
+			"label": "Publish extension: VS Code Marketplace",
+			"type": "shell",
+			"command": "npm run extension:publish",
+			"options": {
+				"cwd": "${workspaceFolder}",
+				"env": {
+					"VSCE_PAT": "${input:vscePat}"
+				}
+			},
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "always",
+				"panel": "shared",
+				"focus": true
+			}
+		},
+		{
+			"label": "Publish extension: VS Code Marketplace (VSCE_PAT already set)",
+			"type": "shell",
+			"command": "npm run extension:publish",
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
