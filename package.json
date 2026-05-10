@@ -15,10 +15,6 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [
-    "onCommand:scriptmate.executeRegisteredScript",
-    "onView:scriptmate.customCommandsView"
-  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
