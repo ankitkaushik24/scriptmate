@@ -81,7 +81,7 @@ async function pickRcPathInteraction(
     candidates.map((p) => ({ label: p })),
     {
       placeHolder:
-        "Which shell profile should ScriptMate update for shell functions?",
+        "Which shell profile should ScriptMate update for shell aliases?",
       ignoreFocusOut: true,
     },
   );
@@ -142,7 +142,7 @@ async function writeRcIfChanged(
   fs.writeFileSync(rcPath, newContent, "utf-8");
   if (!existed) {
     vscode.window.showInformationMessage(
-      `ScriptMate created ${rcPath} for ScriptMate shell functions. Restart the terminal or run source ${path.basename(rcPath)}.`,
+      `ScriptMate created ${rcPath} for ScriptMate shell aliases. Restart the terminal or run source ${path.basename(rcPath)}.`,
     );
   }
 }

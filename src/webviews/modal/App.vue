@@ -45,11 +45,11 @@
         <vscode-text-field
           v-model="formData.shellAlias"
           placeholder="e.g. deploy_staging (optional)"
-          >Shell function name:</vscode-text-field
+          >Shell alias name:</vscode-text-field
         >
         <div class="field-hint">
-          Optional. Name for a function in your shell rc (same identifier
-          rules). Forwards extra args with "$@". Written on save.
+          Optional. Name for a alias in your shell rc (same identifier rules).
+          Forwards extra args with "$@". Written on save.
         </div>
       </div>
 

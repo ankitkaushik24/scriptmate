@@ -18,7 +18,7 @@ export interface ScriptDefinition {
   command: string; // The full command to execute (e.g., "zx src/scripts/my-script.mjs", "sh src/scripts/another.sh")
   /** Working directory for this script; omit or leave blank to use the first workspace folder. */
   baseDirectory?: string;
-  /** Optional shell function name written to ~/.zshrc or ~/.bashrc on save (POSIX identifier). */
+  /** Optional shell alias name written to ~/.zshrc or ~/.bashrc on save (POSIX identifier). */
   shellAlias?: string;
   args: ScriptArgumentDefinition[];
   description?: string; // Optional description for the command in QuickPick
