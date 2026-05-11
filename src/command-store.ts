@@ -21,13 +21,14 @@ export class CommandStore {
 
   private constructor(private context: vscode.ExtensionContext) {
     this.resolveCustomCommandsPath();
-    this.loadCommands();
-    vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration("scriptmate.customCommandsPath")) {
-        this.resolveCustomCommandsPath();
-        this.loadCommands();
-      }
-    });
+    this.context.subscriptions.push(
+      vscode.workspace.onDidChangeConfiguration((e) => {
+        if (e.affectsConfiguration("scriptmate.customCommandsPath")) {
+          this.resolveCustomCommandsPath();
+          this.loadCommands();
+        }
+      }),
+    );
   }
 
   public static getInstance(context: vscode.ExtensionContext): CommandStore {

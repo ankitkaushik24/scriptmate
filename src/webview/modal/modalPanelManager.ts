@@ -11,6 +11,9 @@ export class ModalPanelManager {
   private panel: vscode.WebviewPanel | undefined = undefined;
   private readonly context: vscode.ExtensionContext;
   private readonly commandStore: CommandStore;
+  private currentCommandToEdit: ScriptDefinition | undefined = undefined;
+  private currentCommandDataForModal: ScriptDefinition | undefined = undefined;
+  private currentIsNewCommand: boolean = true;
 
   constructor(context: vscode.ExtensionContext, commandStore: CommandStore) {
     this.context = context;
@@ -22,9 +25,10 @@ export class ModalPanelManager {
       ? vscode.window.activeTextEditor.viewColumn
       : undefined;
 
-    const isNewCommand = !commandToEdit;
+    this.currentCommandToEdit = commandToEdit;
+    this.currentIsNewCommand = !commandToEdit;
 
-    const commandDataForModal: ScriptDefinition = commandToEdit
+    this.currentCommandDataForModal = commandToEdit
       ? { ...commandToEdit }
       : ({
           id: crypto.randomUUID(),
@@ -35,19 +39,15 @@ export class ModalPanelManager {
         } as ScriptDefinition);
 
     if (this.panel) {
+      this.panel.title = this.getModalTitle();
       this.panel.reveal(column);
-      this.panel.webview.postMessage({
-        type: "initialData",
-        payload: { command: commandDataForModal, isNew: isNewCommand },
-      });
+      this.postInitialData(this.panel.webview);
       return;
     }
 
     this.panel = vscode.window.createWebviewPanel(
       "scriptmate.editCommandModal",
-      isNewCommand
-        ? "Add New ScriptMate Script"
-        : `Edit: ${commandDisplayLabel(commandDataForModal)}`,
+      this.getModalTitle(),
       column || vscode.ViewColumn.One,
       {
         enableScripts: true,
@@ -73,86 +73,43 @@ export class ModalPanelManager {
     this.panel.webview.html = getHtmlForModalWebview(
       this.panel.webview,
       this.context,
-      commandDataForModal,
-      isNewCommand,
+      this.currentCommandDataForModal,
+      this.currentIsNewCommand,
     );
 
     this.panel.webview.onDidReceiveMessage(
       async (message) => {
         switch (message.type) {
-          case "saveCommand":
-            const scriptDef = message.payload as ScriptDefinition;
-            try {
-              if (commandToEdit && commandToEdit.id === scriptDef.id) {
-                await this.commandStore.updateCommand(scriptDef);
-                vscode.window.showInformationMessage(
-                  `ScriptMate: Command "${commandDisplayLabel(
-                    scriptDef,
-                  )}" updated.`,
-                );
-              } else if (
-                this.commandStore
-                  .getCommands()
-                  .some((c) => c.id === scriptDef.id)
-              ) {
-                vscode.window.showErrorMessage(
-                  `ScriptMate: Command with ID "${scriptDef.id}" already exists. Please choose a unique ID.`,
-                );
-                this.panel?.webview.postMessage({
-                  type: "saveError",
-                  payload: { error: "ID_EXISTS", command: scriptDef },
-                });
-                return;
-              } else if (commandToEdit && commandToEdit.id !== scriptDef.id) {
-                await this.commandStore.deleteCommand(commandToEdit.id);
-                await this.commandStore.addCommand(scriptDef);
-                vscode.window.showInformationMessage(
-                  `ScriptMate: Command "${commandDisplayLabel(
-                    commandToEdit,
-                  )}" updated to "${commandDisplayLabel(scriptDef)}" with new ID.`,
-                );
-              } else {
-                await this.commandStore.addCommand(scriptDef);
-                vscode.window.showInformationMessage(
-                  `ScriptMate: Command "${commandDisplayLabel(scriptDef)}" added.`,
-                );
-              }
-              this.panel?.dispose();
-            } catch (error) {
-              vscode.window.showErrorMessage(
-                `Failed to save command: ${error}`,
-              );
-              this.panel?.webview.postMessage({
-                type: "saveError",
-                payload: { error: String(error), command: scriptDef },
-              });
-            }
+          case "saveCommand": {
+            const scriptDefinition = message.payload as ScriptDefinition;
+            await this.handleSaveCommand(scriptDefinition);
             return;
-          case "select-folder":
-            const options: vscode.OpenDialogOptions = {
+          }
+          case "select-folder": {
+            const openDialogOptions: vscode.OpenDialogOptions = {
               canSelectMany: false,
               openLabel: "Select Base Directory",
               canSelectFolders: true,
               canSelectFiles: false,
             };
-
-            vscode.window.showOpenDialog(options).then((fileUri) => {
-              if (fileUri && fileUri[0]) {
-                this.panel?.webview.postMessage({
-                  type: "folder-selected",
-                  path: fileUri[0].fsPath,
-                });
-              }
-            });
+            const selectedUris =
+              await vscode.window.showOpenDialog(openDialogOptions);
+            const selectedPath = selectedUris?.[0]?.fsPath;
+            if (selectedPath !== undefined) {
+              this.panel?.webview.postMessage({
+                type: "folder-selected",
+                path: selectedPath,
+              });
+            }
             return;
+          }
           case "cancelModal":
             this.panel?.dispose();
             return;
           case "getInitialData":
-            this.panel?.webview.postMessage({
-              type: "initialData",
-              payload: { command: commandDataForModal, isNew: isNewCommand },
-            });
+            if (this.panel) {
+              this.postInitialData(this.panel.webview);
+            }
             return;
         }
       },
@@ -167,5 +124,73 @@ export class ModalPanelManager {
       null,
       this.context.subscriptions,
     );
+  }
+
+  private getModalTitle() {
+    return this.currentIsNewCommand
+      ? "Add New ScriptMate Script"
+      : `Edit: ${commandDisplayLabel(this.currentCommandDataForModal!)}`;
+  }
+
+  private postInitialData(webview: vscode.Webview) {
+    webview.postMessage({
+      type: "initialData",
+      payload: {
+        command: this.currentCommandDataForModal,
+        isNew: this.currentIsNewCommand,
+      },
+    });
+  }
+
+  private async handleSaveCommand(scriptDefinition: ScriptDefinition) {
+    try {
+      if (
+        this.currentCommandToEdit &&
+        this.currentCommandToEdit.id === scriptDefinition.id
+      ) {
+        await this.commandStore.updateCommand(scriptDefinition);
+        vscode.window.showInformationMessage(
+          `ScriptMate: Command "${commandDisplayLabel(
+            scriptDefinition,
+          )}" updated.`,
+        );
+      } else if (
+        this.commandStore
+          .getCommands()
+          .some((command) => command.id === scriptDefinition.id)
+      ) {
+        vscode.window.showErrorMessage(
+          `ScriptMate: Command with ID "${scriptDefinition.id}" already exists. Please choose a unique ID.`,
+        );
+        this.panel?.webview.postMessage({
+          type: "saveError",
+          payload: { error: "ID_EXISTS", command: scriptDefinition },
+        });
+        return;
+      } else if (
+        this.currentCommandToEdit &&
+        this.currentCommandToEdit.id !== scriptDefinition.id
+      ) {
+        await this.commandStore.deleteCommand(this.currentCommandToEdit.id);
+        await this.commandStore.addCommand(scriptDefinition);
+        vscode.window.showInformationMessage(
+          `ScriptMate: Command "${commandDisplayLabel(
+            this.currentCommandToEdit,
+          )}" updated to "${commandDisplayLabel(scriptDefinition)}" with new ID.`,
+        );
+      } else {
+        await this.commandStore.addCommand(scriptDefinition);
+        vscode.window.showInformationMessage(
+          `ScriptMate: Command "${commandDisplayLabel(scriptDefinition)}" added.`,
+        );
+      }
+      this.panel?.dispose();
+    } catch (error) {
+      vscode.window.showErrorMessage(`Failed to save command: ${error}`);
+      this.panel?.webview.postMessage({
+        type: "saveError",
+        payload: { error: String(error), command: scriptDefinition },
+      });
+    }
   }
 }

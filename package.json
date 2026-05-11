@@ -23,22 +23,6 @@
         "title": "ScriptMate: Execute Registered Script..."
       }
     ],
-    "menus": {
-      "explorer/context": [
-        {
-          "when": "resourceLangId == javascript && resourceExtname == .mjs || resourceExtname == .sh",
-          "command": "scriptmate.executeRegisteredScript",
-          "group": "navigation"
-        }
-      ],
-      "editor/title/context": [
-        {
-          "when": "resourceLangId == javascript && resourceExtname == .mjs || resourceExtname == .sh",
-          "command": "scriptmate.executeRegisteredScript",
-          "group": "navigation"
-        }
-      ]
-    },
     "configuration": {
       "title": "ScriptMate Configuration",
       "properties": {
