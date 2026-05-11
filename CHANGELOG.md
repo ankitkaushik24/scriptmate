@@ -2,6 +2,17 @@
 
 All notable changes to the "scriptmate" extension will be documented in this file.
 
+## [1.2.2] - 2026-05-12
+
+### Added
+
+- When editing a script, each argument shows a **short command preview** (hover for details).
+
+### Changed
+
+- **On/off flags** with a one-letter name now appear as `-f` instead of `--f`, like most command-line tools.
+- **Edit form**: Command is asked for first; script arguments and hints are a bit easier to scan.
+
 ## [1.2.1] - 2026-05-12
 
 ### Added
