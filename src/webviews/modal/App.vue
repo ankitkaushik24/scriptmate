@@ -2,7 +2,7 @@
   <div id="app-modal-form">
     <p v-if="loading">Loading form...</p>
 
-    <div v-if="!loading">
+    <template v-if="!loading">
       <div class="form-group">
         <vscode-text-field
           v-model="formData.label"
@@ -65,7 +65,7 @@
           appearance="icon"
           @click="removeArgument(index)"
           title="Remove this argument"
-          style="float: right"
+          style="float: right; position: sticky; top: 0; right: 0"
         >
           <span class="codicon codicon-trash"></span>
         </vscode-button>
@@ -140,7 +140,7 @@
       >
         Error saving: {{ saveError }}
       </div>
-    </div>
+    </template>
   </div>
 </template>
 

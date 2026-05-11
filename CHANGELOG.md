@@ -2,6 +2,12 @@
 
 All notable changes to the "scriptmate" extension will be documented in this file.
 
+## [1.2.1] - 2026-05-12
+
+### Added
+
+- **Modal**: When validation fails, the form **scrolls to the error shown** so the problem is visible without manual scrolling.
+
 ## [1.2.0] - 2026-05-12
 
 ### Changed
