@@ -1,17 +1,14 @@
 import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
-import {
-  ScriptDefinition,
-  commandDisplayLabel,
-} from "./command-definitions";
+import { ScriptDefinition, commandDisplayLabel } from "./command-definitions";
 import { CommandStore } from "./command-store";
 import { resolveScriptWorkingDirectory } from "./execution-context";
 
 async function promptForArguments(
   context: vscode.ExtensionContext,
   commandDef: ScriptDefinition,
-  currentArgValues: { [key: string]: string | boolean }
+  currentArgValues: { [key: string]: string | boolean },
 ): Promise<void> {
   const resolvedCwd = resolveScriptWorkingDirectory(commandDef);
   const trimmedCustom = commandDef.baseDirectory?.trim();
@@ -100,7 +97,7 @@ async function promptForArguments(
   const selectedItem = await vscode.window.showQuickPick(quickPickItems, {
     placeHolder:
       "Review cwd (workspace vs custom path), arguments, then execute or edit an argument.",
-    ignoreFocusOut: true,
+    ignoreFocusOut: false,
   });
 
   if (!selectedItem) {
@@ -123,7 +120,7 @@ async function promptForArguments(
 
     const terminalOptions: vscode.TerminalOptions = {
       name: path.basename(
-        commandDef.command.split(" ")[0] || "scriptmate-script"
+        commandDef.command.split(" ")[0] || "scriptmate-script",
       ),
       cwd: resolvedCwd,
       env: newEnv,
@@ -139,7 +136,7 @@ async function promptForArguments(
 
   if (selectedItem.action === "edit" && selectedItem.argName) {
     const argToEdit = commandDef.args.find(
-      (arg) => arg.name === selectedItem.argName
+      (arg) => arg.name === selectedItem.argName,
     );
     if (!argToEdit) {
       return;
@@ -149,8 +146,7 @@ async function promptForArguments(
       const input = await vscode.window.showInputBox({
         prompt: `Enter new value for --${argToEdit.name}`,
         placeHolder:
-          argToEdit.description?.trim() ||
-          `Value for --${argToEdit.name}`,
+          argToEdit.description?.trim() || `Value for --${argToEdit.name}`,
         value:
           (currentArgValues[argToEdit.name] as string) ||
           (argToEdit.defaultValue as string) ||
@@ -179,10 +175,9 @@ async function promptForArguments(
         ],
         {
           placeHolder:
-            argToEdit.description?.trim() ||
-            `Enable --${argToEdit.name}?`,
+            argToEdit.description?.trim() || `Enable --${argToEdit.name}?`,
           ignoreFocusOut: true,
-        }
+        },
       );
       if (choice === undefined) {
         return promptForArguments(context, commandDef, currentArgValues);
@@ -206,16 +201,16 @@ export function registerScriptMateCommands(context: vscode.ExtensionContext) {
         const action = await vscode.window.showInformationMessage(
           "No ScriptMate commands found. You can define custom commands in a JSON file.",
           "Configure Custom Commands File",
-          "Open Settings"
+          "Open Settings",
         );
         if (action === "Configure Custom Commands File") {
           vscode.commands.executeCommand(
-            "scriptmate.showCustomCommandsManager"
+            "scriptmate.showCustomCommandsManager",
           );
         } else if (action === "Open Settings") {
           vscode.commands.executeCommand(
             "workbench.action.openSettings",
-            "scriptmate.customCommandsPath"
+            "scriptmate.customCommandsPath",
           );
         }
         return;
@@ -225,11 +220,11 @@ export function registerScriptMateCommands(context: vscode.ExtensionContext) {
 
       if (commandId) {
         selectedCommandDef = availableCommands.find(
-          (cmd: ScriptDefinition) => cmd.id === commandId
+          (cmd: ScriptDefinition) => cmd.id === commandId,
         );
         if (!selectedCommandDef) {
           vscode.window.showErrorMessage(
-            `ScriptMate: Command with ID "${commandId}" not found.`
+            `ScriptMate: Command with ID "${commandId}" not found.`,
           );
           return;
         }
@@ -239,7 +234,7 @@ export function registerScriptMateCommands(context: vscode.ExtensionContext) {
             label: commandDisplayLabel(cmd),
             description: cmd.description,
             id: cmd.id,
-          })
+          }),
         );
 
         const selectedCommandOption = await vscode.window.showQuickPick<
@@ -255,13 +250,13 @@ export function registerScriptMateCommands(context: vscode.ExtensionContext) {
         }
 
         selectedCommandDef = availableCommands.find(
-          (cmd: ScriptDefinition) => cmd.id === selectedCommandOption.id
+          (cmd: ScriptDefinition) => cmd.id === selectedCommandOption.id,
         );
       }
 
       if (!selectedCommandDef) {
         vscode.window.showErrorMessage(
-          "Selected script definition not found. It might have been removed."
+          "Selected script definition not found. It might have been removed.",
         );
         return;
       }
@@ -275,9 +270,9 @@ export function registerScriptMateCommands(context: vscode.ExtensionContext) {
       await promptForArguments(
         context,
         selectedCommandDef,
-        currentArgumentValues
+        currentArgumentValues,
       );
-    }
+    },
   );
   context.subscriptions.push(executeRegisteredScriptDisposable);
 }
