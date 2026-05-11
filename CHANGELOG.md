@@ -2,6 +2,36 @@
 
 All notable changes to the "scriptmate" extension will be documented in this file.
 
+## [1.2.0] - 2026-05-12
+
+### Changed
+
+- Streamlined command loading, modal lifecycle, and configuration handling; removed unused Explorer/editor context menu entries.
+- User-facing copy now consistently describes optional `shellAlias` integration as a **shell alias** (command-definition text, prompts, and notifications).
+
+### Fixed
+
+- More reliable **focus behavior** when stepping through script argument prompts.
+
+## [1.1.0] - 2026-05-11
+
+### Added
+
+- **Webview build**: Vite-based bundling for modal, settings, and side-panel webviews with Vue single-file components and clearer separation from extension host code.
+- **Side panel**: Each script can show its configured **shell alias** as a tag next to the label when `shellAlias` is set.
+- **Open VSX**: Publishing support and task wiring for the Open VSX registry (Cursor discoverability), with related dependency updates.
+- **VS Code Marketplace**: Publish tasks and updated authentication instructions for shipping to the Microsoft Marketplace.
+
+### Changed
+
+- **Command definitions I/O**: Non-blocking persistence path in the command store, with tidier handling and clearer error messages when loading or saving definitions.
+
+## [1.0.0] - 2026-05-10
+
+### Changed
+
+- **Stable 1.x**: Semver move to `1.0.0` with follow-up polish to settings management, working-directory handling, `shellAlias` integration, and command-definition UI. User-visible capabilities for the settings panel, `baseDirectory`, and `shellAlias` are summarized in the **0.2.0** section below.
+
 ## [0.2.0] - 2025-06-09
 
 ### Added
@@ -12,7 +42,7 @@ All notable changes to the "scriptmate" extension will be documented in this fil
 - **Auto-populated Default Paths**: VS Code settings now automatically show the actual default paths being used instead of empty fields
 - **Enhanced Settings Transparency**: Users can now clearly see where their command definitions are stored
 - **Add/Edit modal — working directory**: Radio choice between workspace folder and custom directory (with folder picker).
-- **Optional `shellAlias`**: Globally unique name per script; on successful save ScriptMate updates a marked block in `~/.zshrc` or `~/.bashrc` (from `$SHELL`, else a one-time QuickPick) with a **shell function** (readable body, `"$@"` forwarding, minimal quoting on the `cd` path only).
+- **Optional `shellAlias`**: Globally unique name per script; on successful save ScriptMate updates a marked block in `~/.zshrc` or `~/.bashrc` (from `$SHELL`, else a one-time QuickPick) with a **shell alias** (readable body, `"$@"` forwarding, minimal quoting on the `cd` path only).
 
 ### Changed
 
