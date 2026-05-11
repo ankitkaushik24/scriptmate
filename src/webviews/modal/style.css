@@ -37,11 +37,36 @@ vscode-dropdown {
   width: 100%;
 }
 .argument-group {
-  padding: 10px;
+  padding-inline: 10px;
   border: 1px solid
-    var(--vscode-input-border, var(--vscode-editor-widget-border));
+    var(--vscode-editorWidget-border, var(--vscode-editor-widget-border));
   margin-bottom: 10px;
   border-radius: 4px;
+}
+.argument-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-block: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: var(--vscode-editor-background);
+}
+.argument-cli-preview {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--vscode-editor-font-family, var(--vscode-font-family));
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--vscode-descriptionForeground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.argument-group-header vscode-button {
+  flex-shrink: 0;
 }
 .argument-actions,
 .form-actions {

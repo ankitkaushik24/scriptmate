@@ -4,21 +4,16 @@
 
     <template v-if="!loading">
       <div class="form-group">
+        <vscode-text-field v-model="formData.command"
+          >Command String (e.g., zx src/my.mjs, npm run
+          task):</vscode-text-field
+        >
+      </div>
+      <div class="form-group">
         <vscode-text-field
           v-model="formData.label"
           placeholder="Defaults to command string if empty"
           >Label (optional, Quick Pick & UI):</vscode-text-field
-        >
-      </div>
-      <div class="form-group">
-        <vscode-text-area v-model="formData.description" rows="2"
-          >Description (optional):</vscode-text-area
-        >
-      </div>
-      <div class="form-group">
-        <vscode-text-field v-model="formData.command"
-          >Command String (e.g., zx src/my.mjs, npm run
-          task):</vscode-text-field
         >
       </div>
       <div class="form-group">
@@ -45,12 +40,14 @@
         <vscode-text-field
           v-model="formData.shellAlias"
           placeholder="e.g. deploy_staging (optional)"
-          >Shell alias name:</vscode-text-field
+          >Shell alias name (optional):</vscode-text-field
         >
-        <div class="field-hint">
-          Optional. Name for a alias in your shell rc (same identifier rules).
-          Forwards extra args with "$@". Written on save.
-        </div>
+        <div class="field-hint">Name for a alias in your shell rc.</div>
+      </div>
+      <div class="form-group">
+        <vscode-text-area v-model="formData.description" rows="2"
+          >Description (optional):</vscode-text-area
+        >
       </div>
 
       <div class="form-section-title">
@@ -61,14 +58,21 @@
         :key="index"
         class="argument-group"
       >
-        <vscode-button
-          appearance="icon"
-          @click="removeArgument(index)"
-          title="Remove this argument"
-          style="float: right; position: sticky; top: 0; right: 0"
-        >
-          <span class="codicon codicon-trash"></span>
-        </vscode-button>
+        <div class="argument-group-header">
+          <div
+            class="argument-cli-preview"
+            :title="argumentCommandPreview(arg).title"
+          >
+            {{ argumentCommandPreview(arg).line }}
+          </div>
+          <vscode-button
+            appearance="icon"
+            @click="removeArgument(index)"
+            title="Remove this argument"
+          >
+            <span class="codicon codicon-trash"></span>
+          </vscode-button>
+        </div>
         <div class="form-group">
           <vscode-text-field v-model="arg.name"
             >Name (e.g., ticketId, filePath):</vscode-text-field
@@ -146,6 +150,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, watch, nextTick } from "vue";
+import { formatArgumentFragment } from "../../cli-argument-fragment";
 
 const vscode = acquireVsCodeApi();
 
@@ -224,6 +229,49 @@ const addArgument = () => {
 
 const removeArgument = (index) => {
   formData.args.splice(index, 1);
+};
+
+/** How this argument appears in the executed command (matches extension behavior). */
+const argumentCommandPreview = (arg) => {
+  const name = String(arg.name || "").trim();
+  if (!name) {
+    return {
+      line: "—",
+      title:
+        "Set a name to see how this argument is appended when the script runs.",
+    };
+  }
+
+  const argFmt = {
+    name,
+    type: arg.type === "boolean" ? "boolean" : "string",
+    isPositional: !!arg.isPositional,
+  };
+  const cmd = String(formData.command || "").trim();
+
+  if (argFmt.type === "boolean") {
+    const whenTrue = formatArgumentFragment(argFmt, true);
+    const flag = whenTrue.trim(); // e.g. "--force"
+    const optional = `[${flag}]`;
+    const line = cmd ? `${cmd} ${optional}` : optional;
+    const title = `${line}\n\nWhen true, ${flag || "nothing"} is appended after the command; when false, the flag is omitted (brackets show optional inclusion).`;
+    return { line, title };
+  }
+
+  let sample =
+    typeof arg.defaultValue === "string" ? arg.defaultValue.trim() : "";
+  if (!sample) {
+    sample = "<value>";
+  }
+  const frag = formatArgumentFragment(argFmt, sample);
+  const line = cmd
+    ? `${cmd}${frag}`
+    : (frag || "").trimStart() || "(empty value adds nothing)";
+  const title =
+    frag.trim() === ""
+      ? `${line}\n\nWith an empty string value, this argument adds no fragment. Preview uses placeholder ${sample}.`
+      : `${line}\n\nPreview uses ${sample === "<value>" ? "placeholder <value>" : "the default value"}; quotes match execution.`;
+  return { line, title };
 };
 
 const save = () => {

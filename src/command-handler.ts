@@ -3,6 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { ScriptDefinition, commandDisplayLabel } from "./command-definitions";
 import { CommandStore } from "./command-store";
+import { buildArgumentsSuffix } from "./cli-argument-fragment";
 import { resolveScriptWorkingDirectory } from "./execution-context";
 
 async function promptForArguments(
@@ -13,32 +14,10 @@ async function promptForArguments(
   const resolvedCwd = resolveScriptWorkingDirectory(commandDef);
   const trimmedCustom = commandDef.baseDirectory?.trim();
 
-  function buildCommandString(args: {
-    [key: string]: string | boolean;
-  }): string {
-    let cmdStr = "";
-    for (const argDef of commandDef.args) {
-      const value = args[argDef.name];
-      if (value !== undefined) {
-        if (argDef.isPositional && argDef.type === "string") {
-          if (value !== "") {
-            cmdStr += ` \"${value}\"`;
-          }
-        } else if (argDef.type === "boolean") {
-          if (value === true) {
-            cmdStr += ` --${argDef.name}`;
-          }
-        } else {
-          if (value !== "") {
-            cmdStr += ` --${argDef.name} \"${value}\"`;
-          }
-        }
-      }
-    }
-    return cmdStr;
-  }
-
-  const finalArguments = buildCommandString(currentArgValues);
+  const finalArguments = buildArgumentsSuffix(
+    commandDef.args,
+    currentArgValues,
+  );
   const currentCommandPreview = `${commandDef.command}${finalArguments}`;
   const executionLocationInfo = trimmedCustom
     ? `(Will run in custom directory: ${trimmedCustom})`
