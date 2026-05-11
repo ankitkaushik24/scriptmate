@@ -135,6 +135,7 @@
       </div>
       <div
         v-if="saveError"
+        ref="saveErrorBanner"
         style="color: var(--vscode-errorForeground); margin-top: 10px"
       >
         Error saving: {{ saveError }}
@@ -144,7 +145,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from "vue";
+import { ref, reactive, onMounted, watch, nextTick } from "vue";
 
 const vscode = acquireVsCodeApi();
 
@@ -152,6 +153,18 @@ const loading = ref(true);
 const isEditMode = ref(false);
 const originalId = ref(null);
 const saveError = ref(null);
+const saveErrorBanner = ref(null);
+
+watch(saveError, async (msg) => {
+  if (!msg) {
+    return;
+  }
+  await nextTick();
+  saveErrorBanner.value?.scrollIntoView({
+    behavior: "smooth",
+    block: "nearest",
+  });
+});
 const cwdMode = ref("workspace");
 
 const formData = reactive({
