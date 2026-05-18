@@ -2,6 +2,17 @@
 
 All notable changes to the "scriptmate" extension will be documented in this file.
 
+## [1.3.0] - 2026-05-18
+
+### Added
+
+- **Enum Script Arguments**: Added support for `enum` type in script argument definitions, including validation and UI updates for enum options in the Add/Edit modal.
+- **Additional Parameters**: Added support for additional parameters in command prompts for enhanced user input flexibility and command execution.
+
+### Changed
+
+- **Command Arguments**: Stopped automatically prepending hyphens (`-` or `--`) to flags and arguments during execution; they are now passed exactly as defined in the script configuration.
+
 ## [1.2.2] - 2026-05-12
 
 ### Added
