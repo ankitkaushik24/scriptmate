@@ -1,14 +1,24 @@
-import * as vscode from "vscode"; // Keep vscode import if types are used here, otherwise remove
-
 // --- Type Definitions for Command Structure ---
 export interface ScriptArgumentDefinition {
-  name: string; // e.g., "ticket" or "branch"
+  name: string; // e.g., "--ticket", "-f", or "branch" — emitted exactly as written
   /** Shown in prompts; if omitted, the argument name is used. */
   description?: string;
-  type: "string" | "boolean";
+  type: "string" | "boolean" | "enum";
+  /** Required when `type` is `"enum"`; labels shown in Quick Pick (trimmed, empty omitted). */
+  options?: string[];
   defaultValue?: string | boolean;
   required: boolean;
-  isPositional?: boolean; // If true, the argument value is passed directly without its name
+  /**
+   * When true for `string` or `enum`, only the quoted value is appended (no `name` prefix).
+   * Not used for `boolean`.
+   */
+  isPositional?: boolean;
+  /**
+   * When true for `string` or `enum`, the value is appended without surrounding quotes,
+   * enabling shell globbing and word splitting. Omit or leave false to keep default quoting.
+   * Not used for `boolean`.
+   */
+  unquoted?: boolean;
 }
 
 export interface ScriptDefinition {

@@ -88,19 +88,48 @@
         </div>
         <div class="form-group">
           <label>Type</label>
-          <vscode-dropdown v-model="arg.type">
+          <vscode-dropdown :value="arg.type" @change="setArgType(arg, $event)">
             <vscode-option value="string" :selected="arg.type === 'string'"
               >String</vscode-option
             >
             <vscode-option value="boolean" :selected="arg.type === 'boolean'"
               >Boolean</vscode-option
             >
+            <vscode-option value="enum" :selected="arg.type === 'enum'"
+              >Enum</vscode-option
+            >
           </vscode-dropdown>
+        </div>
+        <div class="form-group" v-if="arg.type === 'enum'">
+          <vscode-text-area
+            v-model="arg.enumOptionsText"
+            rows="4"
+            placeholder="One option per line"
+            >Enum options (one per line):</vscode-text-area
+          >
         </div>
         <div class="form-group" v-if="arg.type === 'string'">
           <vscode-text-field v-model="arg.defaultValue"
             >Default Value (string, optional):</vscode-text-field
           >
+        </div>
+        <div class="form-group" v-if="arg.type === 'enum'">
+          <label>Default value (optional)</label>
+          <vscode-dropdown
+            :value="enumDefaultSelectValue(arg)"
+            @change="onEnumDefaultDropdownChange(arg, $event)"
+          >
+            <vscode-option value="" :selected="!hasEnumDefault(arg)"
+              >(none)</vscode-option
+            >
+            <vscode-option
+              v-for="opt in parsedEnumOptions(arg)"
+              :key="opt"
+              :value="opt"
+              :selected="enumDefaultSelectValue(arg) === opt"
+              >{{ opt }}</vscode-option
+            >
+          </vscode-dropdown>
         </div>
         <div class="form-group" v-if="arg.type === 'boolean'">
           <vscode-radio-group
@@ -119,11 +148,24 @@
             >Required</vscode-checkbox
           >
         </div>
-        <div class="form-group checkbox-group" v-if="arg.type === 'string'">
+        <div
+          class="form-group checkbox-group"
+          v-if="arg.type === 'string' || arg.type === 'enum'"
+        >
           <vscode-checkbox
             :checked="arg.isPositional"
             @change="arg.isPositional = $event.target.checked"
-            >Positional Argument (string only)</vscode-checkbox
+            >Positional argument (string or enum)</vscode-checkbox
+          >
+        </div>
+        <div
+          class="form-group checkbox-group"
+          v-if="arg.type === 'string' || arg.type === 'enum'"
+        >
+          <vscode-checkbox
+            :checked="!!arg.unquoted"
+            @change="arg.unquoted = $event.target.checked || undefined"
+            >Unquoted value</vscode-checkbox
           >
         </div>
       </div>
@@ -191,7 +233,13 @@ const resetForm = (data = {}, isNew = false) => {
   formData.command = data.command || "";
   formData.baseDirectory = data.baseDirectory || "";
   formData.shellAlias = data.shellAlias || "";
-  formData.args = JSON.parse(JSON.stringify(data.args || []));
+  const clonedArgs = JSON.parse(JSON.stringify(data.args || []));
+  for (const arg of clonedArgs) {
+    if (arg.type === "enum") {
+      arg.enumOptionsText = (arg.options || []).join("\n");
+    }
+  }
+  formData.args = clonedArgs;
   cwdMode.value = (formData.baseDirectory || "").trim()
     ? "custom"
     : "workspace";
@@ -231,6 +279,61 @@ const removeArgument = (index) => {
   formData.args.splice(index, 1);
 };
 
+const parsedEnumOptions = (arg) => {
+  return String(arg.enumOptionsText || "")
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+};
+
+const hasEnumDefault = (arg) => {
+  return typeof arg.defaultValue === "string" && arg.defaultValue.trim() !== "";
+};
+
+const enumDefaultSelectValue = (arg) => {
+  return hasEnumDefault(arg) ? String(arg.defaultValue).trim() : "";
+};
+
+const onEnumDefaultDropdownChange = (arg, ev) => {
+  const v = ev.target.value;
+  if (v === "") {
+    delete arg.defaultValue;
+  } else {
+    arg.defaultValue = v;
+  }
+};
+
+const setArgType = (arg, ev) => {
+  const nextType = ev.target.value;
+  if (arg.type === nextType) {
+    return;
+  }
+  const prev = arg.type;
+  arg.type = nextType;
+  if (nextType === "boolean") {
+    arg.isPositional = false;
+    delete arg.unquoted;
+  }
+  if (nextType === "enum") {
+    if (prev !== "enum") {
+      arg.enumOptionsText = "";
+      delete arg.defaultValue;
+    }
+    if (typeof arg.enumOptionsText !== "string") {
+      arg.enumOptionsText = (arg.options || []).join("\n");
+    }
+  } else {
+    delete arg.enumOptionsText;
+    delete arg.options;
+  }
+  if (nextType === "boolean" && typeof arg.defaultValue === "string") {
+    delete arg.defaultValue;
+  }
+  if (nextType === "string" && typeof arg.defaultValue === "boolean") {
+    delete arg.defaultValue;
+  }
+};
+
 /** How this argument appears in the executed command (matches extension behavior). */
 const argumentCommandPreview = (arg) => {
   const name = String(arg.name || "").trim();
@@ -242,19 +345,48 @@ const argumentCommandPreview = (arg) => {
     };
   }
 
+  const argType =
+    arg.type === "boolean"
+      ? "boolean"
+      : arg.type === "enum"
+        ? "enum"
+        : "string";
   const argFmt = {
     name,
-    type: arg.type === "boolean" ? "boolean" : "string",
-    isPositional: !!arg.isPositional,
+    type: argType,
+    isPositional:
+      (argType === "string" || argType === "enum") && !!arg.isPositional,
+    unquoted: (argType === "string" || argType === "enum") && !!arg.unquoted,
   };
   const cmd = String(formData.command || "").trim();
 
   if (argFmt.type === "boolean") {
     const whenTrue = formatArgumentFragment(argFmt, true);
-    const flag = whenTrue.trim(); // e.g. "--force"
+    const flag = whenTrue.trim();
     const optional = `[${flag}]`;
     const line = cmd ? `${cmd} ${optional}` : optional;
-    const title = `${line}\n\nWhen true, ${flag || "nothing"} is appended after the command; when false, the flag is omitted (brackets show optional inclusion).`;
+    const title = `${line}\n\nWhen true, ${flag || "nothing"} is appended after the command; when false, it is omitted (brackets show optional inclusion).`;
+    return { line, title };
+  }
+
+  if (argFmt.type === "enum") {
+    const opts = parsedEnumOptions(arg);
+    let sample =
+      typeof arg.defaultValue === "string" ? arg.defaultValue.trim() : "";
+    if (!sample && opts.length > 0) {
+      sample = opts[0];
+    }
+    if (!sample) {
+      sample = "<value>";
+    }
+    const frag = formatArgumentFragment(argFmt, sample);
+    const line = cmd
+      ? `${cmd}${frag}`
+      : (frag || "").trimStart() || "(empty value adds nothing)";
+    const title =
+      frag.trim() === ""
+        ? `${line}\n\nWith an empty value, this argument adds no fragment.`
+        : `${line}\n\nPreview uses ${sample === "<value>" ? "placeholder <value>" : sample}; quotes match execution.`;
     return { line, title };
   }
 
@@ -285,6 +417,21 @@ const save = () => {
       saveError.value = "Each argument must have a Name.";
       return;
     }
+    if (arg.type === "enum") {
+      const opts = parsedEnumOptions(arg);
+      if (opts.length === 0) {
+        saveError.value =
+          "Each enum argument needs at least one non-empty option (one per line).";
+        return;
+      }
+      if (hasEnumDefault(arg)) {
+        const d = String(arg.defaultValue).trim();
+        if (!opts.includes(d)) {
+          saveError.value = `Enum default for "${String(arg.name).trim()}" must be one of the listed options.`;
+          return;
+        }
+      }
+    }
   }
   const aliasTrim = (formData.shellAlias || "").trim();
   if (aliasTrim && !shellAliasPattern.test(aliasTrim)) {
@@ -304,6 +451,12 @@ const save = () => {
   });
 
   const payload = JSON.parse(JSON.stringify(formData));
+  for (const arg of payload.args) {
+    if (arg.type === "enum") {
+      arg.options = parsedEnumOptions(arg);
+      delete arg.enumOptionsText;
+    }
+  }
   vscode.postMessage({ type: "saveCommand", payload });
 };
 

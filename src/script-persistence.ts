@@ -7,12 +7,28 @@ import {
 /** Safe POSIX shell alias identifier. */
 export const SHELL_ALIAS_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 
+function normalizeEnumOptions(raw: unknown): string[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  return raw
+    .filter((o): o is string => typeof o === "string")
+    .map((o) => o.trim())
+    .filter((o) => o.length > 0);
+}
+
 function normalizeArgumentDefinition(
-  raw: ScriptArgumentDefinition
+  raw: ScriptArgumentDefinition,
 ): ScriptArgumentDefinition {
   const name = typeof raw.name === "string" ? raw.name.trim() : "";
-  const type: "string" | "boolean" =
-    raw.type === "boolean" ? "boolean" : "string";
+  let type: "string" | "boolean" | "enum";
+  if (raw.type === "boolean") {
+    type = "boolean";
+  } else if (raw.type === "enum") {
+    type = "enum";
+  } else {
+    type = "string";
+  }
   const out: ScriptArgumentDefinition = {
     name,
     type,
@@ -25,15 +41,26 @@ function normalizeArgumentDefinition(
   if (raw.defaultValue !== undefined) {
     out.defaultValue = raw.defaultValue;
   }
-  if (raw.isPositional) {
+  if ((type === "string" || type === "enum") && raw.isPositional) {
     out.isPositional = true;
+  }
+  if ((type === "string" || type === "enum") && raw.unquoted) {
+    out.unquoted = true;
+  }
+  if (type === "enum") {
+    const options = normalizeEnumOptions(raw.options);
+    if (options.length > 0) {
+      out.options = options;
+    }
   }
   return out;
 }
 
-export function normalizeScriptDefinition(raw: ScriptDefinition): ScriptDefinition {
+export function normalizeScriptDefinition(
+  raw: ScriptDefinition,
+): ScriptDefinition {
   const args = (Array.isArray(raw.args) ? raw.args : []).map(
-    normalizeArgumentDefinition
+    normalizeArgumentDefinition,
   );
   const baseTrim = raw.baseDirectory?.trim() ?? "";
   const aliasTrim = raw.shellAlias?.trim() ?? "";
@@ -68,7 +95,7 @@ export function normalizeScriptDefinition(raw: ScriptDefinition): ScriptDefiniti
  */
 export function validateScriptDefinitionForPersistence(
   script: ScriptDefinition,
-  allCommands: ScriptDefinition[]
+  allCommands: ScriptDefinition[],
 ): string | null {
   if (script.shellAlias) {
     if (!SHELL_ALIAS_PATTERN.test(script.shellAlias)) {
@@ -83,9 +110,27 @@ export function validateScriptDefinitionForPersistence(
     });
     if (conflict) {
       return `Shell alias "${script.shellAlias}" is already used by "${commandDisplayLabel(
-        conflict
+        conflict,
       )}".`;
     }
   }
+
+  for (const arg of script.args) {
+    if (arg.type === "enum") {
+      const options = arg.options ?? [];
+      if (options.length === 0) {
+        return `Argument "${arg.name || "(unnamed)"}": enum type requires at least one non-empty option.`;
+      }
+      if (arg.defaultValue !== undefined) {
+        if (typeof arg.defaultValue !== "string") {
+          return `Argument "${arg.name || "(unnamed)"}": enum default must be a string.`;
+        }
+        if (!options.includes(arg.defaultValue)) {
+          return `Argument "${arg.name || "(unnamed)"}": default value must be one of the enum options.`;
+        }
+      }
+    }
+  }
+
   return null;
 }

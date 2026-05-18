@@ -1,10 +1,46 @@
 import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
-import { ScriptDefinition, commandDisplayLabel } from "./command-definitions";
+import {
+  ScriptDefinition,
+  ScriptArgumentDefinition,
+  commandDisplayLabel,
+} from "./command-definitions";
 import { CommandStore } from "./command-store";
 import { buildArgumentsSuffix } from "./cli-argument-fragment";
 import { resolveScriptWorkingDirectory } from "./execution-context";
+
+function isUnsetString(value: string | boolean | undefined): boolean {
+  return value === undefined || value === "";
+}
+
+function requiredArgumentUnsatisfied(
+  argDef: ScriptArgumentDefinition,
+  currentArgValues: { [key: string]: string | boolean },
+): boolean {
+  if (!argDef.required) {
+    return false;
+  }
+  const v = currentArgValues[argDef.name];
+  if (argDef.type === "boolean") {
+    return false;
+  }
+  if (argDef.type === "enum") {
+    const opts = argDef.options ?? [];
+    if (v === undefined || v === "") {
+      return argDef.isPositional || argDef.defaultValue === undefined;
+    }
+    if (typeof v !== "string") {
+      return true;
+    }
+    return !opts.includes(v);
+  }
+  // string
+  if (argDef.isPositional) {
+    return isUnsetString(v);
+  }
+  return isUnsetString(v) && argDef.defaultValue === undefined;
+}
 
 async function promptForArguments(
   context: vscode.ExtensionContext,
@@ -46,9 +82,12 @@ async function promptForArguments(
           ? currentValue
             ? "Yes"
             : "No"
-          : `\"${currentValue}\"`;
+          : `\"${String(currentValue)}\"`;
     } else {
-      displayValue = argDef.type === "string" ? "(not set)" : "(No)";
+      displayValue =
+        argDef.type === "string" || argDef.type === "enum"
+          ? "(not set)"
+          : "(No)";
     }
     let description = (argDef.description ?? "").trim();
     if (
@@ -60,7 +99,7 @@ async function promptForArguments(
           ? argDef.defaultValue
             ? "Yes"
             : "No"
-          : `\"${argDef.defaultValue}\"`
+          : `\"${String(argDef.defaultValue)}\"`
       })`;
       description = description ? `${description}${defaultBit}` : defaultBit;
     }
@@ -85,6 +124,34 @@ async function promptForArguments(
   }
 
   if (selectedItem.action === "execute") {
+    const missing = commandDef.args.filter((a) =>
+      requiredArgumentUnsatisfied(a, currentArgValues),
+    );
+    if (missing.length > 0) {
+      const labels = missing.map((a) => a.name).join(", ");
+      await vscode.window.showWarningMessage(
+        `ScriptMate: Set all required arguments before running (${labels}).`,
+      );
+      return promptForArguments(context, commandDef, currentArgValues);
+    }
+
+    for (const argDef of commandDef.args) {
+      if (argDef.type !== "enum") {
+        continue;
+      }
+      const opts = argDef.options ?? [];
+      if (opts.length === 0) {
+        continue;
+      }
+      const v = currentArgValues[argDef.name];
+      if (typeof v === "string" && v !== "" && !opts.includes(v)) {
+        await vscode.window.showWarningMessage(
+          `ScriptMate: "${argDef.name}" is not a valid enum choice; pick a listed value.`,
+        );
+        return promptForArguments(context, commandDef, currentArgValues);
+      }
+    }
+
     const userGlobalEnv = vscode.workspace
       .getConfiguration("scriptmate")
       .get<{ [key: string]: string }>("globalEnv");
@@ -123,9 +190,9 @@ async function promptForArguments(
     let newValue: string | boolean | undefined;
     if (argToEdit.type === "string") {
       const input = await vscode.window.showInputBox({
-        prompt: `Enter new value for --${argToEdit.name}`,
+        prompt: `Enter new value for ${argToEdit.name}`,
         placeHolder:
-          argToEdit.description?.trim() || `Value for --${argToEdit.name}`,
+          argToEdit.description?.trim() || `Value for ${argToEdit.name}`,
         value:
           (currentArgValues[argToEdit.name] as string) ||
           (argToEdit.defaultValue as string) ||
@@ -154,7 +221,7 @@ async function promptForArguments(
         ],
         {
           placeHolder:
-            argToEdit.description?.trim() || `Enable --${argToEdit.name}?`,
+            argToEdit.description?.trim() || `Enable ${argToEdit.name}?`,
           ignoreFocusOut: true,
         },
       );
@@ -162,6 +229,35 @@ async function promptForArguments(
         return promptForArguments(context, commandDef, currentArgValues);
       }
       newValue = choice.value;
+    } else if (argToEdit.type === "enum") {
+      const opts = argToEdit.options ?? [];
+      if (opts.length === 0) {
+        await vscode.window.showErrorMessage(
+          `ScriptMate: Argument "${argToEdit.name}" has no enum options configured.`,
+        );
+        return promptForArguments(context, commandDef, currentArgValues);
+      }
+      const currentStr =
+        (currentArgValues[argToEdit.name] as string | undefined) ??
+        (typeof argToEdit.defaultValue === "string"
+          ? argToEdit.defaultValue
+          : undefined);
+      const choice = await vscode.window.showQuickPick(
+        opts.map((label) => ({
+          label,
+          picked: label === currentStr,
+        })),
+        {
+          placeHolder:
+            argToEdit.description?.trim() ||
+            `Choose a value for ${argToEdit.name}`,
+          ignoreFocusOut: true,
+        },
+      );
+      if (choice === undefined) {
+        return promptForArguments(context, commandDef, currentArgValues);
+      }
+      newValue = choice.label;
     }
     currentArgValues[argToEdit.name] = newValue!;
     return promptForArguments(context, commandDef, currentArgValues);

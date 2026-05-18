@@ -9,10 +9,12 @@ Stop juggling terminal windows and context-switching. With ScriptMate, your scri
 - **Custom Script Management**: Define your scripts in a simple JSON file. ScriptMate provides a dedicated view in the Activity Bar to list, manage (add/edit/delete), and run your custom commands.
   - Configure script `id`, `label` (for display), `description`, and the actual `command` string.
   - Define arguments for your scripts:
-    - Specify argument `name`, `description` (used in prompts), `type` (string or boolean).
-    - Set `defaultValue` for arguments.
+    - Specify argument `name`, `description` (used in prompts), `type` (`string`, `boolean`, or `enum`).
+    - Argument `name` is copied into the executed command exactly as written (for example `--ticket "…"`, `ticket "…"`, or `--verbose` when a boolean is true). ScriptMate does not add extra `-` or `--` prefixes.
+    - Set `defaultValue` for arguments (strings for `string` / `enum`; booleans for `boolean`).
+    - For `enum`, provide `options` (non-empty array of strings). Defaults must match one of the options.
     - Mark arguments as `required`.
-    - Flag string arguments as `isPositional`.
+    - Flag `string` or `enum` arguments as `isPositional` to append only the quoted value (no `name` prefix); order follows the `args` array. Not used for `boolean`.
   - Choose **working directory** per script: **Workspace folder** (first open folder) or **Custom** with an absolute path (`baseDirectory` in JSON).
   - Optionally set **`shellAlias`**: a POSIX-style function name (`[a-zA-Z_][a-zA-Z0-9_]*`). After a successful save, ScriptMate inserts or updates a marked block in `~/.zshrc` or `~/.bashrc` (from `$SHELL`, or a one-time prompt) defining a **shell function** with that name—same resolved working directory and command as ScriptMate, with `"$@"` forwarded so you can pass extra arguments from the terminal. Clearing the field or deleting the script removes the managed block. Names must be unique across all scripts.
 - **Quick Script Execution**:
@@ -81,6 +83,13 @@ To use this with ScriptMate, you would:
             "name": "authToken",
             "description": "The auth token to pass to the serve:qa script",
             "type": "string",
+            "required": true
+          },
+          {
+            "name": "--environment",
+            "type": "enum",
+            "options": ["dev", "qa", "prod"],
+            "defaultValue": "qa",
             "required": true
           }
         ]

@@ -2,11 +2,16 @@
  * Pure CLI fragment formatting for script arguments.
  * Used by the extension at execution time and by the modal webview for previews.
  * Must stay in sync with terminal behavior.
+ *
+ * Positional `string` or `enum`: value only (no `name` prefix).
+ * `quoteValue` (default `true`) controls whether the value is wrapped in double quotes.
  */
 export interface CliArgumentFormatInput {
   name: string;
-  type: "string" | "boolean";
+  type: "string" | "boolean" | "enum";
   isPositional?: boolean;
+  /** When true, the value is emitted without surrounding quotes. Omit for default quoting. */
+  unquoted?: boolean;
 }
 
 /**
@@ -19,21 +24,21 @@ export function formatArgumentFragment(
   if (value === undefined) {
     return "";
   }
-  if (argDef.isPositional && argDef.type === "string") {
-    if (value !== "") {
-      return ` "${value}"`;
-    }
-    return "";
-  }
   if (argDef.type === "boolean") {
     if (value === true) {
-      const prefix = argDef.name.length === 1 ? "-" : "--";
-      return ` ${prefix}${argDef.name}`;
+      return ` ${argDef.name}`;
     }
     return "";
   }
-  if (value !== "") {
-    return ` --${argDef.name} "${value}"`;
+  if (argDef.type === "string" || argDef.type === "enum") {
+    if (value === "") {
+      return "";
+    }
+    const formattedValue = argDef.unquoted ? String(value) : `"${value}"`;
+    if (argDef.isPositional) {
+      return ` ${formattedValue}`;
+    }
+    return ` ${argDef.name} ${formattedValue}`;
   }
   return "";
 }
