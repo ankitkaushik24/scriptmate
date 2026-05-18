@@ -42,10 +42,13 @@ function requiredArgumentUnsatisfied(
   return isUnsetString(v) && argDef.defaultValue === undefined;
 }
 
+const ADDITIONAL_PARAMS_LABEL = "Additional params";
+
 async function promptForArguments(
   context: vscode.ExtensionContext,
   commandDef: ScriptDefinition,
   currentArgValues: { [key: string]: string | boolean },
+  additionalParams: string = "",
 ): Promise<void> {
   const resolvedCwd = resolveScriptWorkingDirectory(commandDef);
   const trimmedCustom = commandDef.baseDirectory?.trim();
@@ -54,7 +57,8 @@ async function promptForArguments(
     commandDef.args,
     currentArgValues,
   );
-  const currentCommandPreview = `${commandDef.command}${finalArguments}`;
+  const additionalParamsSuffix = additionalParams ? ` ${additionalParams}` : "";
+  const currentCommandPreview = `${commandDef.command}${finalArguments}${additionalParamsSuffix}`;
   const executionLocationInfo = trimmedCustom
     ? `(Will run in custom directory: ${trimmedCustom})`
     : resolvedCwd
@@ -62,7 +66,7 @@ async function promptForArguments(
       : "(No workspace folder open — terminal uses VS Code default cwd)";
 
   const quickPickItems: (vscode.QuickPickItem & {
-    action?: "execute" | "edit";
+    action?: "execute" | "edit" | "editExtra";
     argName?: string;
   })[] = [];
 
@@ -112,6 +116,13 @@ async function promptForArguments(
     });
   }
 
+  quickPickItems.push({
+    label: ADDITIONAL_PARAMS_LABEL,
+    description: additionalParams || "(none)",
+    detail: "Raw flags or values to append as is",
+    action: "editExtra",
+  });
+
   const selectedItem = await vscode.window.showQuickPick(quickPickItems, {
     placeHolder:
       "Review cwd (workspace vs custom path), arguments, then execute or edit an argument.",
@@ -132,7 +143,12 @@ async function promptForArguments(
       await vscode.window.showWarningMessage(
         `ScriptMate: Set all required arguments before running (${labels}).`,
       );
-      return promptForArguments(context, commandDef, currentArgValues);
+      return promptForArguments(
+        context,
+        commandDef,
+        currentArgValues,
+        additionalParams,
+      );
     }
 
     for (const argDef of commandDef.args) {
@@ -148,7 +164,12 @@ async function promptForArguments(
         await vscode.window.showWarningMessage(
           `ScriptMate: "${argDef.name}" is not a valid enum choice; pick a listed value.`,
         );
-        return promptForArguments(context, commandDef, currentArgValues);
+        return promptForArguments(
+          context,
+          commandDef,
+          currentArgValues,
+          additionalParams,
+        );
       }
     }
 
@@ -173,11 +194,34 @@ async function promptForArguments(
     };
 
     const terminal = vscode.window.createTerminal(terminalOptions);
-    const commandToExecute = `${commandDef.command}${finalArguments}`;
+    const commandToExecute = `${commandDef.command}${finalArguments}${additionalParamsSuffix}`;
 
     terminal.sendText(commandToExecute);
     terminal.show();
     return;
+  }
+
+  if (selectedItem.action === "editExtra") {
+    const input = await vscode.window.showInputBox({
+      prompt: "Enter additional parameters to append to the command",
+      placeHolder: "e.g. --dry-run --verbose",
+      value: additionalParams,
+      ignoreFocusOut: true,
+    });
+    if (input === undefined) {
+      return promptForArguments(
+        context,
+        commandDef,
+        currentArgValues,
+        additionalParams,
+      );
+    }
+    return promptForArguments(
+      context,
+      commandDef,
+      currentArgValues,
+      input.trim(),
+    );
   }
 
   if (selectedItem.action === "edit" && selectedItem.argName) {
@@ -210,7 +254,12 @@ async function promptForArguments(
         },
       });
       if (input === undefined) {
-        return promptForArguments(context, commandDef, currentArgValues);
+        return promptForArguments(
+          context,
+          commandDef,
+          currentArgValues,
+          additionalParams,
+        );
       }
       newValue = input;
     } else if (argToEdit.type === "boolean") {
@@ -226,7 +275,12 @@ async function promptForArguments(
         },
       );
       if (choice === undefined) {
-        return promptForArguments(context, commandDef, currentArgValues);
+        return promptForArguments(
+          context,
+          commandDef,
+          currentArgValues,
+          additionalParams,
+        );
       }
       newValue = choice.value;
     } else if (argToEdit.type === "enum") {
@@ -235,7 +289,12 @@ async function promptForArguments(
         await vscode.window.showErrorMessage(
           `ScriptMate: Argument "${argToEdit.name}" has no enum options configured.`,
         );
-        return promptForArguments(context, commandDef, currentArgValues);
+        return promptForArguments(
+          context,
+          commandDef,
+          currentArgValues,
+          additionalParams,
+        );
       }
       const currentStr =
         (currentArgValues[argToEdit.name] as string | undefined) ??
@@ -255,12 +314,22 @@ async function promptForArguments(
         },
       );
       if (choice === undefined) {
-        return promptForArguments(context, commandDef, currentArgValues);
+        return promptForArguments(
+          context,
+          commandDef,
+          currentArgValues,
+          additionalParams,
+        );
       }
       newValue = choice.label;
     }
     currentArgValues[argToEdit.name] = newValue!;
-    return promptForArguments(context, commandDef, currentArgValues);
+    return promptForArguments(
+      context,
+      commandDef,
+      currentArgValues,
+      additionalParams,
+    );
   }
 }
 
