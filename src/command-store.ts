@@ -6,17 +6,27 @@ import {
   normalizeScriptDefinition,
   validateScriptDefinitionForPersistence,
 } from "./script-persistence";
-import { syncShellAliasTransition } from "./shell-profile-alias";
+import {
+  syncAllShellAliases,
+  syncShellAliasTransition,
+  validateShellAliasForRc,
+} from "./shell-profile-alias";
 
 const SCRIPTMATE_COMMANDS_JSON = "scriptmate-commands.json";
+
+export type CommandChangeEvent =
+  | { type: "commandAdded"; payload: ScriptDefinition }
+  | { type: "commandUpdated"; payload: ScriptDefinition }
+  | { type: "commandDeleted"; payload: string }
+  | { type: "commandsChanged" };
 
 export class CommandStore {
   private static instance: CommandStore;
   private _commands: ScriptDefinition[] = [];
   private _customCommandsJsonPath: string | null = null;
 
-  private _onDidChangeCommands = new vscode.EventEmitter<void>();
-  public readonly onDidChangeCommands: vscode.Event<void> =
+  private _onDidChangeCommands = new vscode.EventEmitter<CommandChangeEvent>();
+  public readonly onDidChangeCommands: vscode.Event<CommandChangeEvent> =
     this._onDidChangeCommands.event;
 
   private constructor(private context: vscode.ExtensionContext) {
@@ -25,7 +35,15 @@ export class CommandStore {
       vscode.workspace.onDidChangeConfiguration((e) => {
         if (e.affectsConfiguration("scriptmate.customCommandsPath")) {
           this.resolveCustomCommandsPath();
-          this.loadCommands();
+          this.loadCommands().catch((error) => {
+            console.error(
+              "ScriptMate: Failed to load commands after config change",
+              error,
+            );
+            vscode.window.showErrorMessage(
+              `ScriptMate: Failed to load commands after config change. ${error}`,
+            );
+          });
         }
       }),
     );
@@ -78,53 +96,66 @@ export class CommandStore {
   public async loadCommands(): Promise<void> {
     if (!this._customCommandsJsonPath) {
       this._commands = [];
-      this._onDidChangeCommands.fire();
+      this._onDidChangeCommands.fire({ type: "commandsChanged" });
       return;
     }
 
     try {
       let fileContent: string;
-      try {
-        fileContent = await fs.promises.readFile(
-          this._customCommandsJsonPath,
-          "utf-8",
-        );
-      } catch (err: any) {
-        if (err.code === "ENOENT") {
-          this._commands = [];
-          console.log(
-            `ScriptMate: Commands file not found at ${this._customCommandsJsonPath}. Starting with empty list.`,
-          );
-          this._onDidChangeCommands.fire();
-          return;
-        }
-        throw err;
-      }
+      fileContent = await fs.promises.readFile(
+        this._customCommandsJsonPath,
+        "utf-8",
+      );
 
       if (fileContent.trim() === "") {
         this._commands = [];
       } else {
-        this._commands = JSON.parse(fileContent) as ScriptDefinition[];
+        const parsed = JSON.parse(fileContent) as ScriptDefinition[];
         // Basic validation (can be expanded)
         if (
-          !Array.isArray(this._commands) ||
-          !this._commands.every((cmd) => cmd.id && cmd.command)
+          !Array.isArray(parsed) ||
+          !parsed.every((cmd) => cmd.id && cmd.command)
         ) {
-          vscode.window.showErrorMessage(
-            `Error loading ScriptMate commands: ${this._customCommandsJsonPath} contains invalid data.`,
-          );
           this._commands = [];
+          throw new Error(
+            `Commands file ${this._customCommandsJsonPath} contains invalid data.`,
+          );
+        } else {
+          this._commands = parsed.map(normalizeScriptDefinition);
         }
       }
-    } catch (error) {
-      vscode.window.showErrorMessage(
-        `Error loading ScriptMate commands from ${
-          this._customCommandsJsonPath
-        }: ${error instanceof Error ? error.message : String(error)}`,
-      );
+    } catch (err: any) {
       this._commands = [];
+      if (err.code === "ENOENT") {
+        this._commands = [];
+        this._onDidChangeCommands.fire({ type: "commandsChanged" });
+        console.error(
+          `ScriptMate: Commands file not found at ${this._customCommandsJsonPath}. Starting with empty list.`,
+        );
+        err.message = `Commands file not found at ${this._customCommandsJsonPath}. Starting with empty list.`;
+      }
+      throw new Error(
+        `Failed to load commands: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
-    this._onDidChangeCommands.fire();
+    this._onDidChangeCommands.fire({ type: "commandsChanged" });
+  }
+
+  /**
+   * Reload commands from the configured JSON path (re-resolving the path first)
+   * and reconcile shell profile aliases with the loaded list.
+   */
+  public async syncFromFile(): Promise<{
+    commandCount: number;
+    aliasCount: number;
+  }> {
+    this.resolveCustomCommandsPath();
+    await this.loadCommands();
+    await syncAllShellAliases(this.context, this._commands);
+    const aliasCount = this._commands.filter((c) =>
+      Boolean(c.shellAlias?.trim()),
+    ).length;
+    return { commandCount: this._commands.length, aliasCount };
   }
 
   private async saveCommands(): Promise<void> {
@@ -144,21 +175,17 @@ export class CommandStore {
         "utf-8",
       );
     } catch (error) {
-      vscode.window.showErrorMessage(
+      throw new Error(
         `Error saving ScriptMate commands to ${this._customCommandsJsonPath}: ${
           error instanceof Error ? error.message : String(error)
         }`,
       );
-      throw error; // Re-throw for the caller to handle if needed
     }
   }
 
   public async addCommand(command: ScriptDefinition): Promise<void> {
     const normalized = normalizeScriptDefinition(command);
     if (this._commands.some((c) => c.id === normalized.id)) {
-      vscode.window.showErrorMessage(
-        `ScriptMate: Command with ID '${normalized.id}' already exists.`,
-      );
       throw new Error(`Command with ID '${normalized.id}' already exists.`);
     }
     const validationError = validateScriptDefinitionForPersistence(
@@ -166,22 +193,29 @@ export class CommandStore {
       this._commands,
     );
     if (validationError) {
-      vscode.window.showErrorMessage(`ScriptMate: ${validationError}`);
       throw new Error(validationError);
+    }
+    const shellAliasError = normalized.shellAlias
+      ? await validateShellAliasForRc(this.context, normalized.shellAlias)
+      : null;
+    if (shellAliasError) {
+      throw new Error(shellAliasError);
     }
     this._commands.push(normalized);
     await this.saveCommands();
-    this._onDidChangeCommands.fire();
+    this._onDidChangeCommands.fire({
+      type: "commandAdded",
+      payload: normalized,
+    });
     await syncShellAliasTransition(this.context, undefined, normalized);
   }
 
   public async updateCommand(updatedCommand: ScriptDefinition): Promise<void> {
     const index = this._commands.findIndex((c) => c.id === updatedCommand.id);
     if (index === -1) {
-      vscode.window.showErrorMessage(
-        `ScriptMate: Command with ID '${updatedCommand.id}' not found for update.`,
+      throw new Error(
+        `Command with ID '${updatedCommand.id}' not found for update.`,
       );
-      throw new Error(`Command with ID '${updatedCommand.id}' not found.`);
     }
     const previous = this._commands[index];
     const normalized = normalizeScriptDefinition(updatedCommand);
@@ -190,12 +224,20 @@ export class CommandStore {
       this._commands,
     );
     if (validationError) {
-      vscode.window.showErrorMessage(`ScriptMate: ${validationError}`);
       throw new Error(validationError);
+    }
+    const shellAliasError = normalized.shellAlias
+      ? await validateShellAliasForRc(this.context, normalized.shellAlias)
+      : null;
+    if (shellAliasError) {
+      throw new Error(shellAliasError);
     }
     this._commands[index] = normalized;
     await this.saveCommands();
-    this._onDidChangeCommands.fire();
+    this._onDidChangeCommands.fire({
+      type: "commandUpdated",
+      payload: normalized,
+    });
     await syncShellAliasTransition(this.context, previous, normalized);
   }
 
@@ -204,13 +246,13 @@ export class CommandStore {
     const initialLength = this._commands.length;
     this._commands = this._commands.filter((c) => c.id !== commandId);
     if (this._commands.length === initialLength) {
-      vscode.window.showWarningMessage(
-        `ScriptMate: Command with ID '${commandId}' not found for deletion.`,
-      );
-      return;
+      throw new Error(`Command with ID '${commandId}' not found for deletion.`);
     }
     await this.saveCommands();
-    this._onDidChangeCommands.fire();
+    this._onDidChangeCommands.fire({
+      type: "commandDeleted",
+      payload: commandId,
+    });
     await syncShellAliasTransition(this.context, removed, undefined);
   }
 
@@ -230,6 +272,9 @@ export class CommandStore {
       console.warn(
         "ScriptMate: Failed to auto-populate customCommandsPath setting:",
         error,
+      );
+      vscode.window.showErrorMessage(
+        `ScriptMate: Failed to auto-populate default path. ${error}`,
       );
     }
   }

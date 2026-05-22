@@ -348,14 +348,26 @@ export function registerScriptMateCommands(context: vscode.ExtensionContext) {
           "Open Settings",
         );
         if (action === "Configure Custom Commands File") {
-          vscode.commands.executeCommand(
-            "scriptmate.showCustomCommandsManager",
-          );
+          vscode.commands
+            .executeCommand("scriptmate.showCustomCommandsManager")
+            .then(undefined, (err) => {
+              console.error(err);
+              vscode.window.showErrorMessage(
+                `ScriptMate: Failed to open commands manager. ${err}`,
+              );
+            });
         } else if (action === "Open Settings") {
-          vscode.commands.executeCommand(
-            "workbench.action.openSettings",
-            "scriptmate.customCommandsPath",
-          );
+          vscode.commands
+            .executeCommand(
+              "workbench.action.openSettings",
+              "scriptmate.customCommandsPath",
+            )
+            .then(undefined, (err) => {
+              console.error(err);
+              vscode.window.showErrorMessage(
+                `ScriptMate: Failed to open settings. ${err}`,
+              );
+            });
         }
         return;
       }

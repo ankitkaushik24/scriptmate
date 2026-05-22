@@ -6,6 +6,10 @@ import { ScriptDefinition } from "./command-definitions";
 
 const GLOBAL_RC_CACHE_KEY = "scriptmate.shellRcPath";
 
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export function markerStart(name: string): string {
   return `# scriptmate-alias-start ${name}`;
 }
@@ -161,6 +165,60 @@ export async function removeManagedShellAlias(
   await writeRcIfChanged(rcPath, normalized);
 }
 
+/** True when `aliasName` appears as a manual alias/function outside ScriptMate markers. */
+export function hasManualShellAliasConflict(
+  rcContent: string,
+  aliasName: string,
+): boolean {
+  const strippedContent = stripManagedBlock(rcContent, aliasName);
+  const escapedName = escapeRegex(aliasName);
+  const aliasRegex = new RegExp(`^\\s*alias\\s+${escapedName}\\s*=`, "m");
+  const funcRegex1 = new RegExp(`^\\s*${escapedName}\\s*\\(\\s*\\)`, "m");
+  const funcRegex2 = new RegExp(`^\\s*function\\s+${escapedName}\\b`, "m");
+
+  return (
+    aliasRegex.test(strippedContent) ||
+    funcRegex1.test(strippedContent) ||
+    funcRegex2.test(strippedContent)
+  );
+}
+
+export function manualShellAliasConflictMessage(
+  aliasName: string,
+  rcPath: string,
+): string {
+  return `The alias or function '${aliasName}' is already manually defined in ${path.basename(rcPath)}. Please remove it or choose a different alias name`;
+}
+
+/**
+ * Returns an error message if the alias cannot be written to the shell profile, or null if OK.
+ */
+export async function validateShellAliasForRc(
+  context: vscode.ExtensionContext,
+  aliasName: string,
+): Promise<string | null> {
+  const trimmed = aliasName.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const rcPath = await resolveShellRcPath(context);
+  if (!rcPath) {
+    return null;
+  }
+
+  let content = "";
+  if (fs.existsSync(rcPath)) {
+    content = fs.readFileSync(rcPath, "utf-8");
+  }
+
+  if (hasManualShellAliasConflict(content, trimmed)) {
+    return manualShellAliasConflictMessage(trimmed, rcPath);
+  }
+
+  return null;
+}
+
 export async function upsertManagedShellAlias(
   context: vscode.ExtensionContext,
   aliasName: string,
@@ -178,6 +236,11 @@ export async function upsertManagedShellAlias(
   if (fs.existsSync(rcPath)) {
     content = fs.readFileSync(rcPath, "utf-8");
   }
+
+  if (hasManualShellAliasConflict(content, aliasName)) {
+    throw new Error(manualShellAliasConflictMessage(aliasName, rcPath));
+  }
+
   const next = upsertManagedBlock(content, aliasName, fnBlock);
   await writeRcIfChanged(rcPath, next);
 }
@@ -195,16 +258,72 @@ export async function syncShellAliasTransition(
   const nextName = next?.shellAlias?.trim();
 
   try {
-    if (prevName && prevName !== nextName) {
-      await removeManagedShellAlias(context, prevName);
-    }
     if (nextName && next) {
       await upsertManagedShellAlias(context, nextName, next);
     }
+    if (prevName && prevName !== nextName) {
+      await removeManagedShellAlias(context, prevName);
+    }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    vscode.window.showErrorMessage(
-      `ScriptMate: Could not update shell profile (${msg}).`,
+    throw new Error(`Could not update shell profile: ${msg}`);
+  }
+}
+
+const MANAGED_ALIAS_START_PATTERN = /^# scriptmate-alias-start (.+)$/gm;
+
+/** Names of all ScriptMate-managed alias blocks in the resolved shell rc file. */
+export function listManagedShellAliasNames(rcPath: string): string[] {
+  if (!fs.existsSync(rcPath)) {
+    return [];
+  }
+  const content = fs.readFileSync(rcPath, "utf-8");
+  const names: string[] = [];
+  for (const match of content.matchAll(MANAGED_ALIAS_START_PATTERN)) {
+    const name = match[1]?.trim();
+    if (name) {
+      names.push(name);
+    }
+  }
+  return names;
+}
+
+/**
+ * Reconcile the shell profile with the current commands list: remove managed blocks
+ * that no longer have a matching shellAlias, and upsert blocks for each alias in use.
+ */
+export async function syncAllShellAliases(
+  context: vscode.ExtensionContext,
+  commands: ScriptDefinition[],
+): Promise<void> {
+  const rcPath = await resolveShellRcPath(context);
+  if (!rcPath) {
+    vscode.window.showWarningMessage(
+      "ScriptMate: No shell profile selected; shell aliases were not updated.",
     );
+    return;
+  }
+
+  const desiredByName = new Map<string, ScriptDefinition>();
+  for (const cmd of commands) {
+    const name = cmd.shellAlias?.trim();
+    if (name) {
+      desiredByName.set(name, cmd);
+    }
+  }
+
+  try {
+    const managedNames = listManagedShellAliasNames(rcPath);
+    for (const name of managedNames) {
+      if (!desiredByName.has(name)) {
+        await removeManagedShellAlias(context, name);
+      }
+    }
+    for (const [name, script] of desiredByName) {
+      await upsertManagedShellAlias(context, name, script);
+    }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new Error(`Could not sync shell profile: ${msg}`);
   }
 }

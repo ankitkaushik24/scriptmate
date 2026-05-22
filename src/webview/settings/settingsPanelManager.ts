@@ -31,44 +31,54 @@ export class SettingsPanelManager {
             this.context.extensionUri,
             "node_modules",
             "@vscode",
-            "codicons"
+            "codicons",
           ),
           vscode.Uri.joinPath(
             this.context.extensionUri,
             "node_modules",
             "@vscode",
-            "webview-ui-toolkit"
+            "webview-ui-toolkit",
           ),
         ],
-      }
+      },
     );
 
     SettingsPanelManager.currentPanel.webview.html = getHtmlSettingsWebview(
       SettingsPanelManager.currentPanel,
-      this.context
+      this.context,
     );
 
     // Handle messages from the webview
     SettingsPanelManager.currentPanel.webview.onDidReceiveMessage(
       async (message) => {
-        switch (message.type) {
-          case "getSettings":
-            await this.sendCurrentSettings();
-            break;
-          case "selectFile":
-            await this.selectFile(message.currentPath);
-            break;
-          case "saveSettings":
-            await this.saveSettings(message.settings);
-            break;
-          case "showError":
-            vscode.window.showErrorMessage(message.message);
-            break;
-          case "showInfo":
-            vscode.window.showInformationMessage(message.message);
-            break;
+        try {
+          switch (message.type) {
+            case "getSettings":
+              await this.sendCurrentSettings();
+              break;
+            case "selectFile":
+              await this.selectFile(message.currentPath);
+              break;
+            case "saveSettings":
+              await this.saveSettings(message.settings);
+              break;
+            case "showError":
+              vscode.window.showErrorMessage(message.message);
+              break;
+            case "showInfo":
+              vscode.window.showInformationMessage(message.message);
+              break;
+          }
+        } catch (error) {
+          console.error(
+            "ScriptMate: Unhandled error in settingsPanelManager message handler",
+            error,
+          );
+          vscode.window.showErrorMessage(
+            `ScriptMate: Settings error. ${error}`,
+          );
         }
-      }
+      },
     );
 
     // Reset when the current panel is closed
@@ -140,7 +150,7 @@ export class SettingsPanelManager {
       await config.update(
         "customCommandsPath",
         settings.customCommandsPath.trim() || undefined,
-        vscode.ConfigurationTarget.Global
+        vscode.ConfigurationTarget.Global,
       );
 
       SettingsPanelManager.currentPanel.webview.postMessage({
@@ -149,7 +159,7 @@ export class SettingsPanelManager {
       });
 
       vscode.window.showInformationMessage(
-        "ScriptMate settings saved successfully!"
+        "ScriptMate settings saved successfully!",
       );
     } catch (error) {
       const errorMessage = `Failed to save settings: ${error}`;

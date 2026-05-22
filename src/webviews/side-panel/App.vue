@@ -11,6 +11,15 @@
           <span class="codicon codicon-add"></span> Add New Script
         </vscode-button>
         <vscode-button
+          class="sync-btn"
+          appearance="secondary"
+          @click="syncCommands"
+          style="min-width: 40px"
+          title="Sync from commands file"
+        >
+          <span class="codicon codicon-sync"></span>
+        </vscode-button>
+        <vscode-button
           class="settings-btn"
           appearance="secondary"
           @click="openSettings"
@@ -27,7 +36,12 @@
       </div>
     </div>
 
-    <ul class="command-list" v-if="filteredCommands.length > 0">
+    <div v-if="isLoading" class="loading-state" aria-busy="true">
+      <span class="codicon codicon-loading codicon-modifier-spin"></span>
+      <p>Loading scripts…</p>
+    </div>
+
+    <ul v-else-if="filteredCommands.length > 0" class="command-list">
       <li
         v-for="command in filteredCommands"
         :key="command.id"
@@ -89,6 +103,7 @@ const vscode = acquireVsCodeApi();
 
 const commands = ref([]);
 const searchTerm = ref("");
+const isLoading = ref(true);
 
 const postMessage = (message) => {
   vscode.postMessage(message);
@@ -125,6 +140,10 @@ const deleteCommand = (commandId, commandLabel) => {
   });
 };
 
+const syncCommands = () => {
+  postMessage({ type: "syncCommands" });
+};
+
 const openSettings = () => {
   postMessage({ type: "openSettings" });
 };
@@ -154,18 +173,34 @@ const filteredCommands = computed(() => {
 });
 
 onMounted(() => {
-  getInitialCommands();
   window.addEventListener("message", (event) => {
     const message = event.data;
     switch (message.type) {
       case "initialCommands":
         commands.value = message.payload || [];
+        isLoading.value = false;
         break;
-      case "commandsChanged": // This will be sent by the extension when store updates
+      case "commandsChanged": // This will be sent by the extension when store updates (e.g., loaded)
         getInitialCommands(); // Re-fetch all commands
+        break;
+      case "commandAdded":
+        commands.value.push(message.payload);
+        break;
+      case "commandUpdated": {
+        const index = commands.value.findIndex(
+          (c) => c.id === message.payload.id,
+        );
+        if (index !== -1) {
+          commands.value[index] = message.payload;
+        }
+        break;
+      }
+      case "commandDeleted":
+        commands.value = commands.value.filter((c) => c.id !== message.payload);
         break;
     }
   });
+  getInitialCommands();
 });
 </script>
 

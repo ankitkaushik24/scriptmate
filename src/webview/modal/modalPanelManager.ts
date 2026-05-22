@@ -79,38 +79,46 @@ export class ModalPanelManager {
 
     this.panel.webview.onDidReceiveMessage(
       async (message) => {
-        switch (message.type) {
-          case "saveCommand": {
-            const scriptDefinition = message.payload as ScriptDefinition;
-            await this.handleSaveCommand(scriptDefinition);
-            return;
-          }
-          case "select-folder": {
-            const openDialogOptions: vscode.OpenDialogOptions = {
-              canSelectMany: false,
-              openLabel: "Select Base Directory",
-              canSelectFolders: true,
-              canSelectFiles: false,
-            };
-            const selectedUris =
-              await vscode.window.showOpenDialog(openDialogOptions);
-            const selectedPath = selectedUris?.[0]?.fsPath;
-            if (selectedPath !== undefined) {
-              this.panel?.webview.postMessage({
-                type: "folder-selected",
-                path: selectedPath,
-              });
+        try {
+          switch (message.type) {
+            case "saveCommand": {
+              const scriptDefinition = message.payload as ScriptDefinition;
+              await this.handleSaveCommand(scriptDefinition);
+              return;
             }
-            return;
-          }
-          case "cancelModal":
-            this.panel?.dispose();
-            return;
-          case "getInitialData":
-            if (this.panel) {
-              this.postInitialData(this.panel.webview);
+            case "select-folder": {
+              const openDialogOptions: vscode.OpenDialogOptions = {
+                canSelectMany: false,
+                openLabel: "Select Base Directory",
+                canSelectFolders: true,
+                canSelectFiles: false,
+              };
+              const selectedUris =
+                await vscode.window.showOpenDialog(openDialogOptions);
+              const selectedPath = selectedUris?.[0]?.fsPath;
+              if (selectedPath !== undefined) {
+                this.panel?.webview.postMessage({
+                  type: "folder-selected",
+                  path: selectedPath,
+                });
+              }
+              return;
             }
-            return;
+            case "cancelModal":
+              this.panel?.dispose();
+              return;
+            case "getInitialData":
+              if (this.panel) {
+                this.postInitialData(this.panel.webview);
+              }
+              return;
+          }
+        } catch (error) {
+          console.error(
+            "ScriptMate: Unhandled error in modalPanelManager message handler",
+            error,
+          );
+          vscode.window.showErrorMessage(`ScriptMate: Modal error. ${error}`);
         }
       },
       undefined,

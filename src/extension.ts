@@ -10,7 +10,12 @@ export async function activate(context: vscode.ExtensionContext) {
   console.log("ScriptMate extension is now active!");
 
   const commandStore = CommandStore.getInstance(context);
-  await commandStore.loadCommands();
+  void commandStore.loadCommands().catch((error) => {
+    console.error("ScriptMate: Failed to load commands on activate:", error);
+    vscode.window.showErrorMessage(
+      `ScriptMate: Failed to load commands on activate: ${error}`,
+    );
+  });
 
   const modalPanelManager = new ModalPanelManager(context, commandStore);
   const settingsPanelManager = new SettingsPanelManager(context);
@@ -22,6 +27,11 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.window.registerWebviewViewProvider(
       CustomCommandsViewProvider.viewType,
       viewProvider,
+      {
+        webviewOptions: {
+          retainContextWhenHidden: true,
+        },
+      },
     ),
   );
 
