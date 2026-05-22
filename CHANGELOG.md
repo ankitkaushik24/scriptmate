@@ -2,6 +2,12 @@
 
 All notable changes to the "scriptmate" extension will be documented in this file.
 
+## [1.4.0] - 2026-05-22
+
+### Added
+
+- **Side Panel**: Added sync functionality and `retainContextWhenHidden` for the side panel, along with enhanced feedback for command loading and execution errors.
+
 ## [1.3.0] - 2026-05-18
 
 ### Added
