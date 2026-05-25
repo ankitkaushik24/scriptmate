@@ -48,14 +48,16 @@
         class="command-item"
       >
         <div>
-          <div class="command-label">{{ displayLabel(command) }}</div>
+          <div class="command-label">
+            <span>{{ displayLabel(command) }}</span>
+            <vscode-tag v-if="command.shellAlias">
+              <span class="alias-tag">{{ command.shellAlias }}</span>
+            </vscode-tag>
+          </div>
           <div v-if="command.description" class="command-description">
             {{ command.description }}
           </div>
         </div>
-        <vscode-tag v-if="command.shellAlias">
-          <span class="alias-tag">{{ command.shellAlias }}</span>
-        </vscode-tag>
         <div class="actions">
           <vscode-button
             appearance="icon"

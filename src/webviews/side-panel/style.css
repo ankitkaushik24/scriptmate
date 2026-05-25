@@ -59,7 +59,7 @@ vscode-text-field {
   border-bottom: none;
 }
 .command-item vscode-tag {
-  margin-right: auto;
+  margin-left: 8px;
 }
 .command-item .alias-tag {
   text-transform: none;
@@ -67,7 +67,6 @@ vscode-text-field {
 .command-label {
   cursor: default;
   flex-grow: 1;
-  margin-right: 10px;
   font-size: var(--vscode-font-size);
 }
 .command-description {

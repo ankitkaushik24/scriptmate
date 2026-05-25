@@ -3,7 +3,9 @@
 ScriptMate helps execute and maintain any script/command (`shell`, `zx`, `node`, `git`, etc.) directly within Code Editor with ease. It provides a convenient interface for managing and running your frequently used scripts along with thier aliases, complete with argument handling and a dedicated view for easy access. More than just a script alias.
 
 ## Demos
-- **Preview**: 
+
+**▶️ [See ScriptMate in action (YouTube Demo)](https://youtu.be/HSNL7baGEVY)**
+
 ![Preview](./docs/assets/preview.png)
 
 ## Quick Start
@@ -37,10 +39,10 @@ flowchart LR
 
 Accessible via the ScriptMate Settings webview (gear icon) or VS Code standard settings (`File > Preferences > Settings`).
 
-| Setting | Description |
-|---------|-------------|
-| `scriptmate.customCommandsPath` | Absolute path to your JSON definitions. Leave blank to use VS Code global storage. |
-| `scriptmate.globalEnv` | VS Code variables applied to all scripts (e.g. `{"PROJECT_ROOT": "${workspaceFolder}"}`). |
+| Setting                         | Description                                                                               |
+| ------------------------------- | ----------------------------------------------------------------------------------------- |
+| `scriptmate.customCommandsPath` | Absolute path to your JSON definitions. Leave blank to use VS Code global storage.        |
+| `scriptmate.globalEnv`          | VS Code variables applied to all scripts (e.g. `{"PROJECT_ROOT": "${workspaceFolder}"}`). |
 
 ## Commands
 
@@ -56,6 +58,7 @@ Use [docs/agent-prompts.md](docs/agent-prompts.md) when an agent edits your comm
 ## Shell Aliases (`shellAlias`)
 
 If you configure a `shellAlias` for your script, ScriptMate edits your shell rc file between marker comments and writes a **shell function**, not just an alias.
+
 - This allows quoting to stay simple and extra CLI args are forwarded via `"$@"`.
 - **Note**: Ensure you run `source ~/.zshrc` (or the respective file) after the first write or reload your terminal. Names must be unique. Merge conflicts are possible if edited manually in the marked region.
 
