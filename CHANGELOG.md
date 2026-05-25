@@ -2,6 +2,18 @@
 
 All notable changes to the "scriptmate" extension will be documented in this file.
 
+## [1.4.1] - 2026-05-25
+
+### Added
+
+- **Documentation**: [Command schema & argument assembly](docs/commands-schema.md) reference for `scriptmate-commands.json`, plus [agent prompts](docs/agent-prompts.md) for AI-assisted command editing.
+- **README**: Preview image and links to the new docs.
+
+### Changed
+
+- **README**: Restructured quick start, features, settings, and shell-alias guidance; moved deep schema detail into `docs/`.
+- **Marketplace metadata**: Added `keywords` and `qna` in `package.json` for discoverability and support links.
+
 ## [1.4.0] - 2026-05-22
 
 ### Added
