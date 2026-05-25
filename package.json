@@ -15,6 +15,14 @@
   "categories": [
     "Other"
   ],
+  "keywords": [
+    "script",
+    "terminal",
+    "command",
+    "alias",
+    "shell"
+  ],
+  "qna": "https://github.com/ankitkaushik24/scriptmate/issues",
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
