@@ -66,7 +66,7 @@ export class ModalPanelManager {
             "webview-ui-toolkit",
           ),
         ],
-        // retainContextWhenHidden: true, // Optionally
+        retainContextWhenHidden: true,
       },
     );
 

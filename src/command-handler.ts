@@ -44,6 +44,11 @@ function requiredArgumentUnsatisfied(
 
 const ADDITIONAL_PARAMS_LABEL = "Additional params";
 
+const COPY_COMMAND_PREVIEW_BUTTON: vscode.QuickInputButton = {
+  iconPath: new vscode.ThemeIcon("copy"),
+  tooltip: "Copy command preview",
+};
+
 async function promptForArguments(
   context: vscode.ExtensionContext,
   commandDef: ScriptDefinition,
@@ -75,6 +80,7 @@ async function promptForArguments(
     detail: currentCommandPreview,
     description: executionLocationInfo,
     action: "execute",
+    buttons: [COPY_COMMAND_PREVIEW_BUTTON],
   });
 
   for (const argDef of commandDef.args) {
@@ -123,11 +129,48 @@ async function promptForArguments(
     action: "editExtra",
   });
 
-  const selectedItem = await vscode.window.showQuickPick(quickPickItems, {
-    placeHolder:
-      "Review cwd (workspace vs custom path), arguments, then execute or edit an argument.",
-    ignoreFocusOut: false,
-  });
+  type QuickPickItemType = (typeof quickPickItems)[number];
+  const selectedItem = await new Promise<QuickPickItemType | undefined>(
+    (resolve) => {
+      const qp = vscode.window.createQuickPick<QuickPickItemType>();
+      qp.items = quickPickItems;
+      qp.placeholder =
+        "Review cwd (workspace vs custom path), arguments, then execute or edit an argument.";
+      qp.ignoreFocusOut = false;
+
+      let resolved = false;
+
+      qp.onDidAccept(() => {
+        if (!resolved) {
+          resolved = true;
+          resolve(qp.selectedItems[0]);
+          qp.hide();
+        }
+      });
+
+      qp.onDidHide(() => {
+        if (!resolved) {
+          resolved = true;
+          resolve(undefined);
+        }
+        qp.dispose();
+      });
+
+      qp.onDidTriggerItemButton(async ({ item, button }) => {
+        if (
+          item.action === "execute" &&
+          button === COPY_COMMAND_PREVIEW_BUTTON
+        ) {
+          await vscode.env.clipboard.writeText(currentCommandPreview);
+          vscode.window.showInformationMessage(
+            "ScriptMate: Copied command to clipboard.",
+          );
+        }
+      });
+
+      qp.show();
+    },
+  );
 
   if (!selectedItem) {
     vscode.window.showInformationMessage("Script execution cancelled.");

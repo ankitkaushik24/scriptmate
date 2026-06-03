@@ -2,6 +2,12 @@
 
 All notable changes to the "scriptmate" extension will be documented in this file.
 
+## [1.4.2] - 2026-06-03
+
+### Added
+
+- **Copy button on Execute Script quick-pick**: A copy icon appears inline on the "Execute Script" row; clicking it copies the current command preview to the clipboard without closing the picker.
+
 ## [1.4.1] - 2026-05-25
 
 ### Added
